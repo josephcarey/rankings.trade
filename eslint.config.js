@@ -11,6 +11,7 @@ export default tseslint.config(
   {
     ignores: [
       ".svelte-kit/**",
+      ".trellis/**",
       ".wrangler/**",
       "build/**",
       "coverage/**",
