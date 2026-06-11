@@ -1,0 +1,54 @@
+@import "@fontsource-variable/inter/index.css";
+@import "open-props/colors";
+@import "open-props/sizes";
+@import "open-props/fonts";
+
+:root {
+  color-scheme: light;
+  --color-accent: var(--blue-7);
+  --color-background: var(--gray-0);
+  --color-link: var(--blue-8);
+  --color-surface: white;
+  --color-text: var(--gray-12);
+  --color-text-muted: var(--gray-7);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-accent: var(--cyan-3);
+    --color-background: var(--gray-12);
+    --color-link: var(--cyan-3);
+    --color-surface: var(--gray-10);
+    --color-text: var(--gray-0);
+    --color-text-muted: var(--gray-4);
+  }
+}
+
+html {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: InterVariable, var(--font-sans);
+}
+
+body {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 0.1875rem solid var(--color-accent);
+  outline-offset: 0.1875rem;
+}
+
+a {
+  color: var(--color-link);
+}
+
+.flow > * + * {
+  margin-block-start: var(--flow-space, var(--size-4));
+}
+
+.wrapper {
+  inline-size: min(100% - 2rem, 70rem);
+  margin-inline: auto;
+}

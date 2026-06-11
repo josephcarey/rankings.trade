@@ -1,0 +1,13 @@
+name = "rankings-trade"
+main = "./.svelte-kit/cloudflare/_worker.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".svelte-kit/cloudflare"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "rankings-trade-dev"
+database_id = "00000000-0000-0000-0000-000000000000"

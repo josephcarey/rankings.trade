@@ -32,5 +32,37 @@ kanban-md --dir kanban show 1     # a single card
 
 ## Development
 
-Scripts land in card **A1** (`bun install`, `bun run check`, `bun run test`, `bun run ci`,
-`bun run build`, `wrangler dev`). See the README updates that A1–A4 will add.
+Install dependencies with Bun:
+
+```sh
+bun install
+```
+
+Common scripts:
+
+```sh
+bun run dev      # SvelteKit dev server
+bun run build    # Cloudflare Worker bundle via SvelteKit adapter
+bun run check    # svelte-check, TypeScript, knip, ESLint, and bun audit
+bun run test     # Vitest with coverage
+bun run ci       # check + test
+wrangler dev     # serve the Cloudflare Worker locally after a build/sync
+```
+
+Copy the placeholder environment files for local development when needed:
+
+```sh
+cp .env.example .env
+cp .dev.vars.example .dev.vars
+```
+
+Do not commit real secrets. D1 is declared as a Cloudflare binding in `wrangler.toml`; migration
+logic and schema management land in later cards.
+
+## Architecture
+
+- **Runtime:** Bun for package management and scripts.
+- **Frontend:** SvelteKit with strict TypeScript and `@sveltejs/adapter-cloudflare`.
+- **Worker/API:** Hono is mounted under `/api`; `GET /api/health` returns `{ "status": "ok" }`.
+- **Data:** Cloudflare D1 binding named `DB` is configured only as a binding for now.
+- **Quality:** ESLint, knip, Vitest coverage, Prettier defaults, and Bun audit gate local CI.
