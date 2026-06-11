@@ -4,16 +4,15 @@ board:
 tasks_dir: tasks
 statuses:
     - name: backlog
-      show_duration: false
-    - name: todo
-    - name: in-progress
-      require_claim: true
-    - name: review
-      require_claim: true
+    - name: ready
+    - name: preflight
+    - name: in-dev
+    - name: checks
+    - name: needs-review
+    - name: in-review
+    - name: approved
     - name: done
-      show_duration: false
-    - name: archived
-      show_duration: false
+    - name: blocked
 priorities:
     - low
     - medium

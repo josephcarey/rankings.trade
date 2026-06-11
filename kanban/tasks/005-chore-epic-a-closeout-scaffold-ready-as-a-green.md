@@ -1,10 +1,10 @@
 ---
 id: 5
 title: 'chore: epic A closeout — scaffold ready as a green base'
-status: backlog
+status: ready
 priority: medium
-created: 2026-06-11T10:04:55.852236-05:00
-updated: 2026-06-11T10:04:55.852236-05:00
+created: 2026-06-11T11:06:41.60178-05:00
+updated: 2026-06-11T11:06:41.60178-05:00
 tags:
     - epic-a
     - closeout

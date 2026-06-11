@@ -1,10 +1,10 @@
 ---
 id: 2
 title: 'feat: add D1 binding and forward-only migration runner'
-status: backlog
+status: ready
 priority: high
-created: 2026-06-11T10:04:55.754328-05:00
-updated: 2026-06-11T10:04:55.754328-05:00
+created: 2026-06-11T11:06:41.509289-05:00
+updated: 2026-06-11T11:06:41.509289-05:00
 tags:
     - epic-a
     - infra

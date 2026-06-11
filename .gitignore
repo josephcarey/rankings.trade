@@ -1,2 +1,5 @@
 # kanban-md transient lock
 kanban/.lock
+
+# Trellis runtime state (SQLite store, worktrees, logs)
+.trellis/
