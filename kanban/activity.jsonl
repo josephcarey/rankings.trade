@@ -64,3 +64,7 @@
 {"timestamp":"2026-06-11T12:06:22.229314-05:00","action":"move","task_id":3,"detail":"in-dev -\u003e ready"}
 {"timestamp":"2026-06-11T12:06:22.262161-05:00","action":"move","task_id":4,"detail":"in-dev -\u003e ready"}
 {"timestamp":"2026-06-11T12:06:22.291557-05:00","action":"move","task_id":2,"detail":"blocked -\u003e ready"}
+{"timestamp":"2026-06-11T15:49:16.821364-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-11T15:49:16.82519-05:00","action":"release","task_id":3,"detail":"snailish-cyclope"}
+{"timestamp":"2026-06-11T15:49:16.854434-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-11T15:49:16.854599-05:00","action":"release","task_id":4,"detail":"flexured-spanking"}

@@ -4,14 +4,12 @@ title: 'chore: base layout, theming, and structured logging'
 status: ready
 priority: medium
 created: 2026-06-11T11:06:41.539672-05:00
-updated: 2026-06-11T12:06:22.228528-05:00
+updated: 2026-06-11T15:49:16.819862-05:00
 tags:
     - epic-a
     - infra
 depends_on:
     - 1
-claimed_by: snailish-cyclope
-claimed_at: 2026-06-11T12:06:22.228528-05:00
 class: standard
 ---
 
