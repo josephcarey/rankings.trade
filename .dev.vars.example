@@ -1,0 +1,3 @@
+# Placeholder for Cloudflare Workers local secrets used by `wrangler dev`.
+# D1 is configured as a binding in wrangler.toml; do not put real secrets here.
+EXAMPLE_SECRET="replace-with-local-placeholder"

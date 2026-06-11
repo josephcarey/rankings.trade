@@ -3,3 +3,18 @@ kanban/.lock
 
 # Trellis runtime state (SQLite store, worktrees, logs)
 .trellis/
+
+# Dependencies and build output
+node_modules/
+.svelte-kit/
+build/
+coverage/
+.wrangler/
+
+# Secrets
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
