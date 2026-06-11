@@ -1,12 +1,13 @@
 ## Summary
 
--
+<!-- What does this PR do and why? -->
 
-## Verification
+## Kanban task
 
-- [ ] `bun run ci`
-- [ ] `bun run build`
+<!-- Task ID and link, e.g. #13 or kanban-md show 13 -->
 
-## Notes
+## Checklist
 
--
+- [ ] `bun run ci` passes
+- [ ] No secrets committed
+- [ ] Conventional commit message on all commits
