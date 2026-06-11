@@ -4,12 +4,14 @@ title: 'chore: CI workflow and deploy pipeline'
 status: ready
 priority: medium
 created: 2026-06-11T11:06:41.570678-05:00
-updated: 2026-06-11T11:28:06.854556-05:00
+updated: 2026-06-11T12:06:22.261872-05:00
 tags:
     - epic-a
     - infra
 depends_on:
     - 1
+claimed_by: flexured-spanking
+claimed_at: 2026-06-11T12:06:22.261872-05:00
 class: standard
 ---
 
