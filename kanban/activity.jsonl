@@ -16,3 +16,4 @@
 {"timestamp":"2026-06-11T11:28:06.825007-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
 {"timestamp":"2026-06-11T11:28:06.854834-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
 {"timestamp":"2026-06-11T11:28:06.883937-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-11T11:36:33.809648-05:00","action":"move","task_id":1,"detail":"blocked -\u003e done"}
