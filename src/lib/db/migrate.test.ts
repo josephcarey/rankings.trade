@@ -1,15 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import Database from "sql.js";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { type MigrationFile, runMigrations } from "./migrate";
 
 /**
- * Mock D1Database implementation for testing
+ * Real SQLite database adapter wrapping sql.js for testing
  *
- * Simulates the D1 API with an in-memory database of statements
+ * Implements the D1 API surface needed for the migration runner.
  */
-class MockD1Database {
-  private data: Map<string, Map<string, unknown>> = new Map();
+class SQLiteTestDatabase {
+  private db: any;
+
+  constructor(database: any) {
+    this.db = database;
+  }
 
   all() {
     return Promise.resolve([]);
@@ -28,7 +33,7 @@ class MockD1Database {
   }
 
   prepare(sql: string) {
-    return new MockD1Statement(sql, this.data);
+    return new SQLiteTestStatement(sql, this.db);
   }
 
   withSession() {
@@ -37,14 +42,14 @@ class MockD1Database {
 }
 
 /**
- * Mock D1Statement for testing
+ * Real SQLite statement adapter wrapping sql.js for testing
  */
-class MockD1Statement {
+class SQLiteTestStatement {
   private bindings: unknown[] = [];
 
   constructor(
     private sql: string,
-    private data: Map<string, Map<string, unknown>>,
+    private db: any,
   ) {}
 
   all(): Promise<any[]> {
@@ -57,18 +62,22 @@ class MockD1Statement {
   }
 
   async first<T>(): Promise<T | undefined> {
-    // Simulate SELECT query
-    if (this.sql.includes("SELECT") && this.sql.includes("_migrations")) {
-      const table = this.data.get("_migrations");
-      if (table) {
-        // First binding is the name
-        const migrationName = this.bindings[0];
-        if (table.has(String(migrationName))) {
-          return { name: migrationName } as T;
+    try {
+      // For SELECT queries, use exec to run with parameters
+      const results = this.db.exec(this.sql, this.bindings);
+      if (results.length > 0 && results[0]?.values?.length > 0) {
+        const columns = results[0].columns;
+        const values = results[0].values[0];
+        const row: Record<string, unknown> = {};
+        for (const [index, col] of columns.entries()) {
+          row[col] = values[index];
         }
+        return row as T;
       }
+      return undefined;
+    } catch {
+      return undefined;
     }
-    return undefined;
   }
 
   async raw(): Promise<any[][]> {
@@ -76,47 +85,28 @@ class MockD1Statement {
   }
 
   async run() {
-    // Simulate table creation
-    if (this.sql.includes("CREATE TABLE")) {
-      const tableName = this.parseTableName(this.sql);
-      if (tableName && !this.data.has(tableName)) {
-        this.data.set(tableName, new Map());
-      }
+    try {
+      // For INSERT/CREATE/UPDATE/DELETE, use run()
+      this.db.run(this.sql, this.bindings);
+      return { success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`SQL execution failed: ${message}`, { cause: error });
     }
-
-    // Simulate inserts into _migrations
-    if (
-      this.sql.includes("INSERT INTO _migrations") &&
-      this.bindings.length > 0
-    ) {
-      const migrationsTable = this.data.get("_migrations") || new Map();
-      if (!this.data.has("_migrations")) {
-        this.data.set("_migrations", migrationsTable);
-      }
-      const migrationName = this.bindings[0];
-      migrationsTable.set(String(migrationName), { name: migrationName });
-    }
-
-    return { success: true };
-  }
-
-  private parseTableName(sql: string): string | null {
-    const match = sql.match(/CREATE TABLE IF NOT EXISTS (\w+)/i);
-    if (match?.[1]) return match[1];
-    const match2 = sql.match(/CREATE TABLE (\w+)/i);
-    if (match2?.[1]) return match2[1];
-    return null;
   }
 }
 
 describe("runMigrations", () => {
   let db: any;
+  let SQL: any;
 
-  beforeEach(() => {
-    db = new MockD1Database() as unknown as D1Database;
+  beforeEach(async () => {
+    SQL = await Database();
+    const sqliteDb = new SQL.Database();
+    db = new SQLiteTestDatabase(sqliteDb) as unknown as D1Database;
   });
 
-  it("creates the _migrations table on first run", async () => {
+  it("initializes successfully with no migrations", async () => {
     const migrations: MigrationFile[] = [];
     const result = await runMigrations(db, migrations);
 
@@ -124,11 +114,17 @@ describe("runMigrations", () => {
     expect(result.applied).toEqual([]);
   });
 
-  it("applies a single migration", async () => {
+  it("applies a single init migration that creates the _migrations table", async () => {
     const migrations: MigrationFile[] = [
       {
         name: "0001_init",
-        content: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
+        content: `
+          CREATE TABLE _migrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
+        `,
       },
     ];
 
@@ -142,16 +138,22 @@ describe("runMigrations", () => {
     const migrations: MigrationFile[] = [
       {
         name: "0001_init",
-        content: "CREATE TABLE users (id INTEGER PRIMARY KEY);",
+        content: `
+          CREATE TABLE _migrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
+        `,
       },
       {
-        name: "0002_add_posts",
+        name: "0002_add_users",
+        content: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
+      },
+      {
+        name: "0003_add_posts",
         content:
           "CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER);",
-      },
-      {
-        name: "0003_add_index",
-        content: "CREATE INDEX idx_posts_user_id ON posts(user_id);",
       },
     ];
 
@@ -160,26 +162,32 @@ describe("runMigrations", () => {
     expect(result.success).toBe(true);
     expect(result.applied).toEqual([
       "0001_init",
-      "0002_add_posts",
-      "0003_add_index",
+      "0002_add_users",
+      "0003_add_posts",
     ]);
   });
 
-  it("is idempotent: skips already-applied migrations", async () => {
+  it("is idempotent: skips already-applied migrations on second run", async () => {
     const migrations: MigrationFile[] = [
       {
         name: "0001_init",
-        content: "CREATE TABLE users (id INTEGER PRIMARY KEY);",
+        content: `
+          CREATE TABLE _migrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
+        `,
       },
       {
-        name: "0002_add_posts",
-        content: "CREATE TABLE posts (id INTEGER PRIMARY KEY);",
+        name: "0002_add_users",
+        content: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
       },
     ];
 
     // First run: apply both
     const result1 = await runMigrations(db, migrations);
-    expect(result1.applied).toEqual(["0001_init", "0002_add_posts"]);
+    expect(result1.applied).toEqual(["0001_init", "0002_add_users"]);
 
     // Second run: should skip both (already applied)
     const result2 = await runMigrations(db, migrations);
@@ -189,8 +197,13 @@ describe("runMigrations", () => {
   it("handles migrations with multiple SQL statements", async () => {
     const migrations: MigrationFile[] = [
       {
-        name: "0001_multi",
+        name: "0001_init",
         content: `
+          CREATE TABLE _migrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
           CREATE TABLE users (id INTEGER PRIMARY KEY);
           CREATE TABLE posts (id INTEGER PRIMARY KEY);
           CREATE INDEX idx_posts ON posts(id);
@@ -201,18 +214,25 @@ describe("runMigrations", () => {
     const result = await runMigrations(db, migrations);
 
     expect(result.success).toBe(true);
-    expect(result.applied).toEqual(["0001_multi"]);
+    expect(result.applied).toEqual(["0001_init"]);
   });
 
   it("handles migrations with leading/trailing whitespace and comments", async () => {
     const migrations: MigrationFile[] = [
       {
-        name: "0001_clean",
+        name: "0001_init",
         content: `
-          -- This is a comment
+          -- Initialize migrations bookkeeping table
+          CREATE TABLE _migrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
+
+          -- Create users table
           CREATE TABLE users (id INTEGER PRIMARY KEY);
-          
-          -- Another comment
+
+          -- Create posts table
           CREATE TABLE posts (id INTEGER PRIMARY KEY);
         `,
       },
@@ -221,25 +241,37 @@ describe("runMigrations", () => {
     const result = await runMigrations(db, migrations);
 
     expect(result.success).toBe(true);
-    expect(result.applied).toEqual(["0001_clean"]);
+    expect(result.applied).toEqual(["0001_init"]);
   });
 
   it("supports partial runs when some migrations are already applied", async () => {
     const migrations1: MigrationFile[] = [
       {
         name: "0001_init",
-        content: "CREATE TABLE users (id INTEGER PRIMARY KEY);",
+        content: `
+          CREATE TABLE _migrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
+        `,
       },
     ];
 
     const migrations2: MigrationFile[] = [
       {
         name: "0001_init",
-        content: "CREATE TABLE users (id INTEGER PRIMARY KEY);",
+        content: `
+          CREATE TABLE _migrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
+        `,
       },
       {
-        name: "0002_add_posts",
-        content: "CREATE TABLE posts (id INTEGER PRIMARY KEY);",
+        name: "0002_add_users",
+        content: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
       },
     ];
 
@@ -249,6 +281,51 @@ describe("runMigrations", () => {
 
     // Run both, should only apply the new one
     const result2 = await runMigrations(db, migrations2);
-    expect(result2.applied).toEqual(["0002_add_posts"]);
+    expect(result2.applied).toEqual(["0002_add_users"]);
+  });
+
+  it("enforces SQL semantics: fails if first non-init migration tries to create _migrations", async () => {
+    const migrations: MigrationFile[] = [
+      {
+        name: "0001_users",
+        content: "CREATE TABLE users (id INTEGER PRIMARY KEY);",
+      },
+      {
+        name: "0002_migrations",
+        content: `
+          CREATE TABLE _migrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
+        `,
+      },
+    ];
+
+    // Should throw because first migration doesn't have 'init' in name
+    await expect(runMigrations(db, migrations)).rejects.toThrow(
+      /First migration must create the _migrations table/,
+    );
+  });
+
+  it("validates that _migrations table exists before recording migrations", async () => {
+    const migrations: MigrationFile[] = [
+      {
+        name: "0001_init",
+        content: `
+          CREATE TABLE _migrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);
+        `,
+      },
+    ];
+
+    const result = await runMigrations(db, migrations);
+
+    expect(result.success).toBe(true);
+    expect(result.applied).toEqual(["0001_init"]);
   });
 });

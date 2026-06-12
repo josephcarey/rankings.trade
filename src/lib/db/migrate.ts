@@ -24,6 +24,23 @@ export type MigrationFile = {
  * @returns Object with success flag and list of applied migration names
  * @throws Error if any migration fails
  */
+/**
+ * Check if the _migrations table exists and has the expected schema.
+ * Returns true if the table exists, false otherwise.
+ */
+async function hasMigrationsTable(db: Database): Promise<boolean> {
+  try {
+    const result = await db
+      .prepare(
+        `SELECT name FROM sqlite_master WHERE type='table' AND name='_migrations'`,
+      )
+      .first<{ name: string }>();
+    return !!result;
+  } catch {
+    return false;
+  }
+}
+
 export async function runMigrations(
   db: Database,
   migrations: MigrationFile[],
@@ -34,27 +51,38 @@ export async function runMigrations(
   const applied: string[] = [];
 
   try {
-    // Ensure _migrations table exists
-    await db
-      .prepare(
-        `CREATE TABLE IF NOT EXISTS _migrations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )`,
-      )
-      .run();
+    // Check if _migrations table exists
+    let tableExists = await hasMigrationsTable(db);
+
+    if (!tableExists && migrations.length === 0) {
+      // No migrations to apply and table doesn't exist
+      return { success: true, applied };
+    }
+
+    if (!tableExists && migrations.length > 0 && !migrations[0]?.name.includes("init")) {
+      // The first migration should create the _migrations table
+      throw new Error(
+        "First migration must create the _migrations table. Expected a migration with 'init' in the name.",
+      );
+    }
 
     // Apply each migration that hasn't been applied yet
     for (const migration of migrations) {
       // Check if already applied
-      const existing = await db
-        .prepare("SELECT name FROM _migrations WHERE name = ?")
-        .bind(migration.name)
-        .first<{ name: string }>();
+      // First, update tableExists in case the migration just created it
+      if (!tableExists) {
+        tableExists = await hasMigrationsTable(db);
+      }
 
-      if (existing) {
-        continue; // Already applied
+      if (tableExists) {
+        const existing = await db
+          .prepare("SELECT name FROM _migrations WHERE name = ?")
+          .bind(migration.name)
+          .first<{ name: string }>();
+
+        if (existing) {
+          continue; // Already applied
+        }
       }
 
       // Apply migration (each file may contain multiple statements)
@@ -69,6 +97,14 @@ export async function runMigrations(
       }
 
       // Record migration as applied
+      // The _migrations table should now exist (created by the first migration)
+      tableExists = await hasMigrationsTable(db);
+      if (!tableExists) {
+        throw new Error(
+          `Migration ${migration.name} did not create _migrations table`,
+        );
+      }
+
       await db
         .prepare(
           "INSERT INTO _migrations (name, applied_at) VALUES (?, CURRENT_TIMESTAMP)",
