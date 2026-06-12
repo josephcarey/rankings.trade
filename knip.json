@@ -12,6 +12,7 @@
     "vite",
     "wrangler"
   ],
+
   "eslint": {
     "entry": ["eslint.config.js"]
   },
@@ -19,9 +20,3 @@
     "config": ["vite.config.ts"]
   }
 }
-
-
-
-
-
-

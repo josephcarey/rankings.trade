@@ -10,6 +10,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json && tsc --noEmit && knip --exclude binaries && eslint . && bun audit",
     "ci": "bun run check && bun run test",
     "db:migrate": "bun scripts/db-migrate.ts",
+    "deploy": "wrangler deploy",
     "dev": "vite dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
