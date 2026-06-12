@@ -6,6 +6,7 @@ import type { AuthedVariables } from "./auth";
 import { logger } from "../logger";
 import { createAgentsApi } from "./agents";
 import { attachLocalUser, clerkAuth, requireAuth } from "./auth";
+import { createBotApi } from "./bot";
 
 export const api = new Hono<{ Bindings: CloudflareBindings }>().basePath(
   "/api",
@@ -53,3 +54,5 @@ authed.get("/", (context) => context.json({ user: context.get("user") }));
 api.route("/me", authed);
 
 api.route("/agents", createAgentsApi());
+
+api.route("/bot", createBotApi());

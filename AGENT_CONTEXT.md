@@ -1,43 +1,38 @@
-# AGENT_CONTEXT — Card #21 (C6): agent API token management (API + UI)
+# AGENT_CONTEXT — Card #22 (C7): bot token-auth middleware
 
 ## Scope
-Agent owners generate, list, revoke, and rotate per-agent API tokens; the raw
-secret is shown exactly once at creation/rotation and is never retrievable after.
+Authenticate bot requests via a per-agent Bearer token (a distinct, bot-only
+path — a Clerk session does NOT satisfy it) and expose the resolved agent to
+handlers. Wired to a real `/api/bot/*` route group.
 
 ## Files
-- `src/lib/agents/token-service.ts` — tested logic layer composing ownership
-  checks (`agents.ts`) + token crypto (`token.ts`) + persistence
-  (`agent-tokens.ts`): `requireOwnedAgent` (private), `parseTokenId`,
-  `listAgentTokens`, `createAgentToken`, `revokeAgentToken`, `rotateAgentToken`.
-  Returns non-secret `TokenView` (never `token_hash`).
-- `src/api/agents.ts` — authed Hono routes under `/api/agents`:
-  `GET/POST /:symbol/tokens`, `POST /:symbol/tokens/:id/{revoke,rotate}`.
-- `src/routes/agents/[symbol]/+page.server.ts` + `+page.svelte` — token mgmt UI:
-  create form, show-once secret banner, list (label/prefix/created/last-used/
-  status), revoke + rotate.
-- `src/routes/agents/+page.svelte` — each agent now links to its token page.
+- `src/api/bot-auth.ts`:
+  - `parseBearer(header)` — extracts the token from `Authorization: Bearer <t>`.
+  - `shouldRefreshLastUsed(lastUsedAt, now, thresholdMs=10min)` — throttle predicate.
+  - `createRequireAgentToken({ now? })` — middleware factory (clock injectable);
+    parses bearer → `hashToken` (C3) → `findActiveTokenByHash` (C4) →
+    `getAgentById`; 401 on missing/malformed/unknown/revoked; on success sets
+    `agent` + `token` context vars and touches `last_used_at` only when stale.
+  - `requireAgentToken` — default wall-clock middleware.
+- `src/api/bot.ts` — `createBotApi()`: `requireAgentToken` + `GET /whoami` echoing
+  the authenticated agent (representative end-to-end protected endpoint).
+- `src/api/app.ts` — mounts `api.route("/bot", createBotApi())`.
 
-## Security decisions (rubber-duck reviewed before implementing)
-- "Agent not found" and "not your agent" collapse to a single 404 — callsign
-  ownership cannot be enumerated.
-- Strict `parseTokenId` (`^\d+$`, safe positive integer) before any DB call.
-- Label trimmed before validation AND storage (1–60 chars).
-- Raw token returned only in the action/API response; never in `load`, never
-  logged, never persisted. `token_hash` never leaves the service.
-- Revoke/rotate scoped by `agent.id` after the ownership check.
-- Rotate non-atomic (revoke + insert) is an accepted v1 risk; the row helper
-  returns null on failure so success is never falsely reported.
+## Decisions
+- 401s use the studio error envelope (`{ error: { code, message } }`).
+- `last_used_at` write throttled to >=10 min staleness (null/unparseable → write)
+  to avoid per-request write amplification. SQLite UTC timestamp parsed as
+  `YYYY-MM-DDTHH:MM:SSZ`.
+- Rate limiting / body-size caps remain Epic F (out of scope).
 
-## Tests
-- `token-service.test.ts` (24): parseTokenId matrix; ownership denial for all ops;
-  show-once + trimmed label; list masking + ordering; revoke idempotency +
-  cross-agent isolation; rotate revokes old/issues one new, 404 on revoked/unknown.
-- `agents.test.ts` (+5): create 201/400/404, list+revoke+rotate happy path,
-  404 on non-numeric id.
-- `[symbol]/page.server.test.ts` (9): load owner/404; create secret-once/400/404;
-  revoke; rotate; 404 on bad/unknown id.
+## Tests (`src/api/bot-auth.test.ts`, 20)
+- parseBearer matrix (null/empty/wrong-scheme/"Bearer "/valid/trimmed).
+- shouldRefreshLastUsed: never-used, stale, within-window, exact boundary,
+  unparseable.
+- Middleware: no header / malformed / unknown / revoked → 401; valid → 200 with
+  agent on context; recent token NOT rewritten (throttle); stale token rewritten.
 
 ## Evidence
 - `bun run ci` -> green. svelte-check 0 errors (2 pre-existing benign warnings).
-  26 test files, 214 tests passing.
-- Coverage: All files 95.83% lines / 84.52% branch (>=80% floor held).
+  27 test files, 234 tests passing.
+- Coverage: All files 95.5% lines / 85.26% branch (>=80% floor held).
