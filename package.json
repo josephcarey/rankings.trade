@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "build": "vite build",
-    "check": "svelte-check --tsconfig ./tsconfig.json && tsc --noEmit && knip --exclude binaries && eslint . && bun audit",
+    "check": "svelte-check --tsconfig ./tsconfig.json && tsc --noEmit && knip --exclude binaries && eslint . && bun audit --audit-level=high",
     "ci": "bun run check && bun run test",
     "db:migrate": "bun scripts/db-migrate.ts",
     "deploy": "wrangler deploy",
@@ -29,6 +29,8 @@
     "open-props": "^1.7.23",
     "svelte": "^5.56.3",
     "svelte-clerk": "^1.1.9",
+    "sveltekit-superforms": "^2.30.1",
+    "valibot": "^1.4.1",
     "vite": "^8.0.16"
   },
   "devDependencies": {
