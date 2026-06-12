@@ -1,41 +1,28 @@
-# Card #14 — Epic B closeout: auth is a green base
+# AGENT_CONTEXT — Epic D (Scraping & snapshots)
 
-## Summary
-Authentication & user accounts verified end-to-end as a green base for later
-epics. All Epic B cards (#6–#13, #15) are merged to `main`; `bun run ci` is green.
+Working branch: `josephcarey/epic-d-scraping-snapshots`. One commit per card; one PR to
+`main` at closeout (main is checked out in the protected main checkout, so the local
+checkout-main/merge flow is not possible from this worktree).
 
-## End-to-end verification (by code trace + automated tests)
-No live Clerk creds in this environment; each boundary is verified by the
-repo's unit/integration tests (faking Clerk + an in-memory D1) plus a wiring
-trace of `hooks.server.ts` and `api/app.ts`.
+## Foundational: esbuild audit fix (commit 80c7ce8)
+`bun run ci` was red on `main` solely from `bun audit` (GHSA-gv7w-rqvm-qjhr, esbuild
+< 0.28.1, transitive via vite ^0.28.0 vs wrangler's exact 0.27.3 pin). Added
+`overrides.esbuild = "^0.28.1"`. Verified: build OK, `bun audit` clean, full CI green.
+Recommended the orchestrator land the same override on `main` for Epic C.
 
-### AC1 — sign-in → provision/refresh → settings persist → sign-out
-- Magic-link sign-in: `routes/sign-in/[...rest]` (#8), Clerk `<SignIn>`.
-- Session populated each request: `clerkSessionHandle` sets `locals.userId`/`session` (#15).
-- Local `users` row provisioned/refreshed: `localUserHandle` → `resolveLocalUser`/`provisionUser` (#10), preserving local-only fields.
-- Profile settings persist: `/settings` load+action (#12) + form UI (#13); now reachable via a signed-in **Settings** nav link added here.
-- Sign-out: `<SignOutButton>` in the layout (#8).
+## Card #16 — snapshots schema migration + port-boundary types  ✅ DONE
+Files:
+- `migrations/0010_snapshots.sql` — `snapshots` table (id, reset_date, observed_at,
+  agent_symbol, credits, credit_rank, total_agents, ship_count, faction; UNIQUE triple)
+  + `idx_snapshots_agent_time`, `idx_snapshots_reset_time`. Dropped net-worth + chart_*;
+  kept ship_count; added faction. Migration number 0010 claimed (0003-0009 left for Epic C).
+- `src/lib/db/snapshots-types.ts` — `AgentSnapshotRow`, `PublicAgent`, `SpaceTradersClient`
+  (the port boundary). The two not-yet-consumed exports are tagged `@public` for knip.
+- `src/lib/db/snapshots-migration.test.ts` — loads the real migrations dir, runs the
+  runner, and asserts: full-row round-trip, UNIQUE enforcement, multi-observation allowed,
+  ship_count/faction present & net-worth/chart columns absent, both indexes created.
 
-### AC2 — authed routes redirect when signed out; public open
-- `requireAuthHandle` in the hooks sequence redirects signed-out `/settings*` to sign-in (302, destination preserved); public paths pass (#11). Tested in `guard.test.ts`.
-
-### AC3 — protected API 401 unauth / 200 with session
-- `/api/me` authed group runs `clerkAuth, requireAuth, attachLocalUser`; guest → 401 studio error, valid session → 200 with the local user (#9/#10). Tested in `api/auth.test.ts`.
-
-### AC4 — `bun run ci` green on `main`
-- 19 test files, 124 tests, global coverage ≥80%. svelte-check 0 errors (1 benign superForm init warning, non-failing).
-
-## Change in this card
-- `routes/+layout.svelte`: added a signed-in **Settings** nav link so the AC1
-  end-to-end flow is reachable from the UI (previously `/settings` was only
-  reachable by direct URL).
-
-## Hooks sequence (final)
-`withClerkHandler() → clerkSessionHandle() → localUserHandle → requireAuthHandle → apiHandle`
-
-## Follow-ups (non-blocking, noted for roadmap)
-- No component-level (`.svelte`) test harness; UI behavior is covered indirectly via server/schema tests. Consider `@testing-library/svelte` + jsdom if richer UI grows.
-- `joi` (unused optional superforms adapter) carries a moderate advisory; audit gate set to `--audit-level=high` per studio standard.
-
-## Result
-Epic B complete. Auth is a green base for later epics.
+Evidence:
+- `bunx vitest run src/lib/db/snapshots-migration.test.ts` -> 5 passed.
+- `bun run ci` -> exit 0; svelte-check 0 errors (1 pre-existing warning); knip clean;
+  `bun audit` clean; 129 tests passed; coverage >= 80% floor held.
