@@ -1,35 +1,41 @@
-# Card #11 — protect authed SvelteKit routes and redirect unauthenticated users
+# Card #12 — profile settings server (load, update action, persistence)
 
 ## Summary
-Server-side route guard: signed-out requests for authed paths (`/settings*`)
-redirect to sign-in with the intended destination preserved; public paths and
-authenticated requests pass through. Guard runs in the hooks sequence, so
-protected content never flashes client-side.
+Authed `/settings` server: a `load` that seeds a superform from the user's
+persisted `visibility` + `dashboard_url`, and a form `action` that validates
+input (valibot), persists via `updateUserProfile`, and reports field-level
+errors / success. First use of `sveltekit-superforms` + `valibot` in the repo.
 
 ## What changed
-- `src/lib/auth/guard.ts` (new):
-  - `requiresAuth(pathname)` — pure classifier; `/settings` + subpaths are authed,
-    everything else public.
-  - `signInRedirect(pathname, search)` — builds `/sign-in?redirect_url=<encoded>`
-    (param matches the existing sign-in route's `redirect_url`/`safeRedirectTarget`).
-  - `requireAuthHandle` — SvelteKit `Handle`: `redirect(302, …)` for signed-out
-    authed requests, else `resolve(event)`.
-- `src/hooks.server.ts` — `requireAuthHandle` added to the sequence after
-  `localUserHandle` (Clerk session → local user → guard → api).
+- `bun add sveltekit-superforms valibot`.
+- `src/routes/settings/profile-schema.ts` (new) — `profileSchema` (valibot):
+  `visibility ∈ {public,private}`; `dashboard_url` trimmed, ≤2048 chars,
+  empty-or-http(s) URL. `toDashboardUrl("")→null` clear helper.
+- `src/routes/settings/+page.server.ts` (new) — `load` (defensive redirect when
+  no local user; seeds form) + default `action` (superValidate → fail(400) on
+  invalid; persists via `updateUserProfile`; fail(404) if row missing;
+  `message(form, "Profile updated.")` on success).
+- `package.json` — `check` script's audit aligned to the studio standard:
+  `bun audit --audit-level=high` (only High/Critical fail the build). superforms
+  pulls an unused optional `joi` adapter with a moderate advisory; we use valibot,
+  never load joi. The standard says only High/Critical should gate.
 
-## Tests (`guard.test.ts`)
-- `requiresAuth`: settings root/subpaths → true; home, leaderboard, public
-  profile, sign-in, callback, /api → false; prefix-only collision (`/settings-export`) → false.
-- `signInRedirect`: encodes pathname; preserves+encodes query string.
-- `requireAuthHandle`: signed-out on `/settings` → 302 with encoded destination,
-  resolve not called; signed-in → passes; signed-out on public → passes.
+## Tests
+- `profile-schema.test.ts` (10) — visibility picklist, http/https accept,
+  non-url/non-http(s)/over-length reject, empty allowed, trim, `toDashboardUrl`.
+- `page.server.test.ts` (7) — load seeds form; load redirects when user null;
+  action persists valid + success message; trims; clears on empty; invalid url →
+  400 field error + no persist; missing row → 404. Uses the repo's sql.js D1 adapter.
 
 ## Evidence
-`bun run ci` green: 17 test files, 107 tests, guard.ts 100% coverage,
-global ≥80%.
+`bun run ci` green: 19 test files, 124 tests, settings dir 96% coverage, global ≥80%.
 
 ## AC mapping
-- AC1 server-side redirect preserving destination → requireAuthHandle + signInRedirect.
-- AC2 public routes open when signed out → requiresAuth false for public + handle test.
-- AC3 server-side, no client flash → runs in hooks.server.ts sequence.
-- AC4 tested signed-in + signed-out → handle tests cover both.
+- AC1 load returns visibility+dashboard_url → load test.
+- AC2 validate + persist via helper → schema + action.
+- AC3 invalid → field error, no persist; valid → persists+success → action tests.
+- AC4 superforms introduced + used in action → yes.
+- AC5 load+action+validation tested → above.
+
+## Note
+`ProfileInput` type export removed (knip: unused) — card #13 can re-introduce if the form UI needs it.
