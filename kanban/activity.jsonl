@@ -68,3 +68,481 @@
 {"timestamp":"2026-06-11T15:49:16.82519-05:00","action":"release","task_id":3,"detail":"snailish-cyclope"}
 {"timestamp":"2026-06-11T15:49:16.854434-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
 {"timestamp":"2026-06-11T15:49:16.854599-05:00","action":"release","task_id":4,"detail":"flexured-spanking"}
+{"timestamp":"2026-06-12T01:49:18.329575-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T01:49:18.360546-05:00","action":"move","task_id":2,"detail":"ready -\u003e preflight"}
+{"timestamp":"2026-06-12T01:49:18.391405-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T01:49:18.391609-05:00","action":"claim","task_id":2,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T01:49:33.9082-05:00","action":"move","task_id":2,"detail":"preflight -\u003e in-dev"}
+{"timestamp":"2026-06-12T01:49:33.9403-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T01:49:33.940615-05:00","action":"release","task_id":2,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T01:49:33.972537-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T01:49:34.001796-05:00","action":"move","task_id":3,"detail":"ready -\u003e preflight"}
+{"timestamp":"2026-06-12T01:49:34.032287-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T01:49:34.032456-05:00","action":"claim","task_id":3,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T01:49:53.54277-05:00","action":"move","task_id":3,"detail":"preflight -\u003e in-dev"}
+{"timestamp":"2026-06-12T01:49:53.575643-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T01:49:53.575859-05:00","action":"release","task_id":3,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T01:49:53.60781-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T01:49:53.639005-05:00","action":"move","task_id":4,"detail":"ready -\u003e preflight"}
+{"timestamp":"2026-06-12T01:49:53.667823-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T01:49:53.667988-05:00","action":"claim","task_id":4,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T01:50:08.283053-05:00","action":"move","task_id":4,"detail":"preflight -\u003e in-dev"}
+{"timestamp":"2026-06-12T01:50:08.314433-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T01:50:08.314622-05:00","action":"release","task_id":4,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T01:50:08.376463-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T01:50:08.4425-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T01:50:08.442716-05:00","action":"claim","task_id":2,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T01:59:50.541879-05:00","action":"move","task_id":2,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T01:59:50.574344-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T01:59:50.574534-05:00","action":"release","task_id":2,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T01:59:50.606636-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T01:59:50.672809-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T01:59:50.673017-05:00","action":"claim","task_id":3,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:10:49.264409-05:00","action":"move","task_id":3,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T02:10:49.295949-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:10:49.296142-05:00","action":"release","task_id":3,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:10:49.326839-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:10:49.385709-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:10:49.385871-05:00","action":"claim","task_id":4,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:15:50.842607-05:00","action":"move","task_id":4,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T02:15:50.880751-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:15:50.880946-05:00","action":"release","task_id":4,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:15:50.949472-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:15:51.011587-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:15:51.011777-05:00","action":"claim","task_id":2,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:16:06.33953-05:00","action":"move","task_id":2,"detail":"checks -\u003e needs-review"}
+{"timestamp":"2026-06-12T02:16:06.374253-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:16:06.374461-05:00","action":"release","task_id":2,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:16:06.404988-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:16:06.464196-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:16:06.464388-05:00","action":"claim","task_id":3,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:16:10.47379-05:00","action":"move","task_id":3,"detail":"checks -\u003e in-dev"}
+{"timestamp":"2026-06-12T02:16:10.504188-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:16:10.533609-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:16:10.533776-05:00","action":"release","task_id":3,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:16:10.562465-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:16:10.617867-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:16:10.618013-05:00","action":"claim","task_id":4,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:16:22.638674-05:00","action":"move","task_id":4,"detail":"checks -\u003e needs-review"}
+{"timestamp":"2026-06-12T02:16:22.66922-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:16:22.669479-05:00","action":"release","task_id":4,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:16:22.728589-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:16:22.756522-05:00","action":"move","task_id":2,"detail":"needs-review -\u003e in-review"}
+{"timestamp":"2026-06-12T02:16:22.784483-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:16:22.784695-05:00","action":"claim","task_id":2,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:21:19.583324-05:00","action":"move","task_id":2,"detail":"in-review -\u003e in-dev"}
+{"timestamp":"2026-06-12T02:21:19.614587-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:21:19.644517-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:21:19.644695-05:00","action":"release","task_id":2,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:21:19.674396-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:21:19.703198-05:00","action":"move","task_id":4,"detail":"needs-review -\u003e in-review"}
+{"timestamp":"2026-06-12T02:21:19.731363-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:21:19.731551-05:00","action":"claim","task_id":4,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:25:01.187537-05:00","action":"move","task_id":4,"detail":"in-review -\u003e in-dev"}
+{"timestamp":"2026-06-12T02:25:01.218877-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:25:01.249542-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:25:01.250022-05:00","action":"release","task_id":4,"detail":"dugout-biaxial"}
+{"timestamp":"2026-06-12T02:25:01.781666-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:25:01.844397-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:25:01.844596-05:00","action":"claim","task_id":2,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:30:52.959614-05:00","action":"move","task_id":2,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T02:30:52.993043-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:30:52.993277-05:00","action":"release","task_id":2,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:30:53.025749-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:30:53.084088-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:30:53.084282-05:00","action":"claim","task_id":3,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:38:36.42739-05:00","action":"move","task_id":3,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T02:38:36.459518-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:38:36.459741-05:00","action":"release","task_id":3,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:38:36.491353-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:38:36.553776-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:38:36.553964-05:00","action":"claim","task_id":4,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:41:44.856342-05:00","action":"move","task_id":4,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T02:41:44.89055-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:41:44.890774-05:00","action":"release","task_id":4,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:41:44.958135-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:41:45.020902-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:41:45.021117-05:00","action":"claim","task_id":2,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:42:00.450076-05:00","action":"move","task_id":2,"detail":"checks -\u003e needs-review"}
+{"timestamp":"2026-06-12T02:42:00.480979-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:42:00.481177-05:00","action":"release","task_id":2,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:42:00.512045-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:42:00.570185-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:42:00.570349-05:00","action":"claim","task_id":3,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:42:14.712248-05:00","action":"move","task_id":3,"detail":"checks -\u003e needs-review"}
+{"timestamp":"2026-06-12T02:42:14.741506-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:42:14.741712-05:00","action":"release","task_id":3,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:42:14.770431-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:42:14.826264-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:42:14.82647-05:00","action":"claim","task_id":4,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:42:14.988678-05:00","action":"move","task_id":4,"detail":"checks -\u003e in-dev"}
+{"timestamp":"2026-06-12T02:42:15.019831-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:42:15.050204-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:42:15.050396-05:00","action":"release","task_id":4,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:42:15.108459-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:42:15.137313-05:00","action":"move","task_id":2,"detail":"needs-review -\u003e in-review"}
+{"timestamp":"2026-06-12T02:42:15.1666-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:42:15.166793-05:00","action":"claim","task_id":2,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:44:54.751903-05:00","action":"move","task_id":2,"detail":"in-review -\u003e approved"}
+{"timestamp":"2026-06-12T02:44:54.782261-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:44:54.782478-05:00","action":"release","task_id":2,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:44:54.813745-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:44:54.844991-05:00","action":"move","task_id":3,"detail":"needs-review -\u003e in-review"}
+{"timestamp":"2026-06-12T02:44:54.87779-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:44:54.878091-05:00","action":"claim","task_id":3,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:47:17.573756-05:00","action":"move","task_id":3,"detail":"in-review -\u003e in-dev"}
+{"timestamp":"2026-06-12T02:47:17.603737-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:47:17.633925-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:47:17.634148-05:00","action":"release","task_id":3,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:47:17.69544-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:47:17.751436-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:47:17.751626-05:00","action":"claim","task_id":2,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:47:40.245775-05:00","action":"move","task_id":2,"detail":"approved -\u003e done"}
+{"timestamp":"2026-06-12T02:47:40.281421-05:00","action":"edit","task_id":2,"detail":"feat: add D1 binding and forward-only migration runner"}
+{"timestamp":"2026-06-12T02:47:40.281668-05:00","action":"release","task_id":2,"detail":"ensign-barile"}
+{"timestamp":"2026-06-12T02:47:40.787971-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:47:40.850491-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:47:40.850679-05:00","action":"claim","task_id":3,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T02:53:38.921161-05:00","action":"move","task_id":3,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T02:53:38.958167-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:53:38.958383-05:00","action":"release","task_id":3,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T02:53:38.989489-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:53:39.049535-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:53:39.049728-05:00","action":"claim","task_id":4,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T02:56:12.239792-05:00","action":"move","task_id":4,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T02:56:12.277316-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:56:12.277585-05:00","action":"release","task_id":4,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T02:56:12.341434-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:56:12.406068-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:56:12.406269-05:00","action":"claim","task_id":3,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T02:56:27.608867-05:00","action":"move","task_id":3,"detail":"checks -\u003e needs-review"}
+{"timestamp":"2026-06-12T02:56:27.639585-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:56:27.639792-05:00","action":"release","task_id":3,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T02:56:27.671643-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:56:27.731585-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:56:27.731777-05:00","action":"claim","task_id":4,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T02:56:40.529715-05:00","action":"move","task_id":4,"detail":"checks -\u003e needs-review"}
+{"timestamp":"2026-06-12T02:56:40.560601-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:56:40.560827-05:00","action":"release","task_id":4,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T02:56:40.623137-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:56:40.652134-05:00","action":"move","task_id":3,"detail":"needs-review -\u003e in-review"}
+{"timestamp":"2026-06-12T02:56:40.682054-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:56:40.682256-05:00","action":"claim","task_id":3,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T02:58:34.641512-05:00","action":"move","task_id":3,"detail":"in-review -\u003e approved"}
+{"timestamp":"2026-06-12T02:58:34.672706-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T02:58:34.672925-05:00","action":"release","task_id":3,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T02:58:34.703916-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:58:34.734046-05:00","action":"move","task_id":4,"detail":"needs-review -\u003e in-review"}
+{"timestamp":"2026-06-12T02:58:34.763114-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T02:58:34.763318-05:00","action":"claim","task_id":4,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T03:00:16.191807-05:00","action":"move","task_id":4,"detail":"in-review -\u003e approved"}
+{"timestamp":"2026-06-12T03:00:16.222171-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:00:16.222408-05:00","action":"release","task_id":4,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T03:00:16.285498-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:00:16.344212-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:00:16.344425-05:00","action":"claim","task_id":3,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T03:00:16.580192-05:00","action":"move","task_id":3,"detail":"approved -\u003e blocked"}
+{"timestamp":"2026-06-12T03:00:16.609993-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:00:17.318031-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:00:17.318262-05:00","action":"release","task_id":3,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T03:00:17.349035-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:00:17.408059-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:00:17.40826-05:00","action":"claim","task_id":4,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T03:00:17.630024-05:00","action":"move","task_id":4,"detail":"approved -\u003e blocked"}
+{"timestamp":"2026-06-12T03:00:17.661453-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:00:19.942321-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:00:19.942606-05:00","action":"release","task_id":4,"detail":"cygnine-kamassi"}
+{"timestamp":"2026-06-12T03:28:14.853219-05:00","action":"move","task_id":3,"detail":"blocked -\u003e approved"}
+{"timestamp":"2026-06-12T03:28:14.887887-05:00","action":"move","task_id":4,"detail":"blocked -\u003e approved"}
+{"timestamp":"2026-06-12T03:28:30.442397-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:28:30.507323-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:28:30.507645-05:00","action":"claim","task_id":3,"detail":"moellon-surbate"}
+{"timestamp":"2026-06-12T03:28:30.949081-05:00","action":"move","task_id":3,"detail":"approved -\u003e in-dev"}
+{"timestamp":"2026-06-12T03:28:30.987807-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:28:31.021134-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:28:31.021349-05:00","action":"release","task_id":3,"detail":"moellon-surbate"}
+{"timestamp":"2026-06-12T03:28:31.05273-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:28:31.115014-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:28:31.115232-05:00","action":"claim","task_id":4,"detail":"moellon-surbate"}
+{"timestamp":"2026-06-12T03:28:31.494484-05:00","action":"move","task_id":4,"detail":"approved -\u003e in-dev"}
+{"timestamp":"2026-06-12T03:28:31.524637-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:28:31.555651-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:28:31.55597-05:00","action":"release","task_id":4,"detail":"moellon-surbate"}
+{"timestamp":"2026-06-12T03:28:32.009729-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:28:32.077363-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:28:32.077641-05:00","action":"claim","task_id":3,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:32:35.512948-05:00","action":"move","task_id":3,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T03:32:35.546366-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:32:35.546581-05:00","action":"release","task_id":3,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:32:35.578266-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:32:35.638555-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:32:35.638807-05:00","action":"claim","task_id":4,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:36:19.062522-05:00","action":"move","task_id":4,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T03:36:19.094592-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:36:19.09482-05:00","action":"release","task_id":4,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:36:19.154919-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:36:19.21183-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:36:19.212131-05:00","action":"claim","task_id":3,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:36:33.831147-05:00","action":"move","task_id":3,"detail":"checks -\u003e needs-review"}
+{"timestamp":"2026-06-12T03:36:33.861204-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:36:33.861428-05:00","action":"release","task_id":3,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:36:33.891312-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:36:33.948793-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:36:33.949028-05:00","action":"claim","task_id":4,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:36:46.751001-05:00","action":"move","task_id":4,"detail":"checks -\u003e needs-review"}
+{"timestamp":"2026-06-12T03:36:46.781013-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:36:46.781234-05:00","action":"release","task_id":4,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:36:46.84161-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:36:46.872179-05:00","action":"move","task_id":3,"detail":"needs-review -\u003e in-review"}
+{"timestamp":"2026-06-12T03:36:46.900343-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:36:46.90056-05:00","action":"claim","task_id":3,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:38:18.592712-05:00","action":"move","task_id":3,"detail":"in-review -\u003e approved"}
+{"timestamp":"2026-06-12T03:38:18.623221-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:38:18.623582-05:00","action":"release","task_id":3,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:38:18.655315-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:38:18.68514-05:00","action":"move","task_id":4,"detail":"needs-review -\u003e in-review"}
+{"timestamp":"2026-06-12T03:38:18.715293-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:38:18.715522-05:00","action":"claim","task_id":4,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:39:10.190942-05:00","action":"move","task_id":4,"detail":"in-review -\u003e approved"}
+{"timestamp":"2026-06-12T03:39:10.220835-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:39:10.221069-05:00","action":"release","task_id":4,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:39:10.28052-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:39:10.338871-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:39:10.339095-05:00","action":"claim","task_id":3,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:39:28.861526-05:00","action":"move","task_id":3,"detail":"approved -\u003e done"}
+{"timestamp":"2026-06-12T03:39:28.890377-05:00","action":"edit","task_id":3,"detail":"chore: base layout, theming, and structured logging"}
+{"timestamp":"2026-06-12T03:39:28.890577-05:00","action":"release","task_id":3,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:39:28.920546-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:39:28.979906-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:39:28.980114-05:00","action":"claim","task_id":4,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:39:29.223345-05:00","action":"move","task_id":4,"detail":"approved -\u003e in-dev"}
+{"timestamp":"2026-06-12T03:39:29.253249-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:39:29.280343-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:39:29.280554-05:00","action":"release","task_id":4,"detail":"else-mucigen"}
+{"timestamp":"2026-06-12T03:39:29.773078-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:39:29.829732-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:39:29.829953-05:00","action":"claim","task_id":4,"detail":"herniate-deseed"}
+{"timestamp":"2026-06-12T03:44:15.056472-05:00","action":"move","task_id":4,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T03:44:15.091796-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:44:15.092035-05:00","action":"release","task_id":4,"detail":"herniate-deseed"}
+{"timestamp":"2026-06-12T03:44:15.157999-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:44:15.225123-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:44:15.225394-05:00","action":"claim","task_id":4,"detail":"herniate-deseed"}
+{"timestamp":"2026-06-12T03:44:34.818725-05:00","action":"move","task_id":4,"detail":"checks -\u003e needs-review"}
+{"timestamp":"2026-06-12T03:44:34.855234-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:44:34.855488-05:00","action":"release","task_id":4,"detail":"herniate-deseed"}
+{"timestamp":"2026-06-12T03:44:34.922638-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:44:34.954912-05:00","action":"move","task_id":4,"detail":"needs-review -\u003e in-review"}
+{"timestamp":"2026-06-12T03:44:34.987111-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:44:34.987375-05:00","action":"claim","task_id":4,"detail":"herniate-deseed"}
+{"timestamp":"2026-06-12T03:46:02.858288-05:00","action":"move","task_id":4,"detail":"in-review -\u003e approved"}
+{"timestamp":"2026-06-12T03:46:02.889932-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:46:02.890173-05:00","action":"release","task_id":4,"detail":"herniate-deseed"}
+{"timestamp":"2026-06-12T03:46:02.953184-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:46:03.017823-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:46:03.01809-05:00","action":"claim","task_id":4,"detail":"herniate-deseed"}
+{"timestamp":"2026-06-12T03:46:19.618642-05:00","action":"move","task_id":4,"detail":"approved -\u003e done"}
+{"timestamp":"2026-06-12T03:46:19.653033-05:00","action":"edit","task_id":4,"detail":"chore: CI workflow and deploy pipeline"}
+{"timestamp":"2026-06-12T03:46:19.653271-05:00","action":"release","task_id":4,"detail":"herniate-deseed"}
+{"timestamp":"2026-06-12T03:46:20.1096-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:46:20.138505-05:00","action":"move","task_id":5,"detail":"ready -\u003e preflight"}
+{"timestamp":"2026-06-12T03:46:20.170807-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:46:20.171031-05:00","action":"claim","task_id":5,"detail":"shaven-finding"}
+{"timestamp":"2026-06-12T03:46:34.3057-05:00","action":"move","task_id":5,"detail":"preflight -\u003e in-dev"}
+{"timestamp":"2026-06-12T03:46:34.336625-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:46:34.336843-05:00","action":"release","task_id":5,"detail":"shaven-finding"}
+{"timestamp":"2026-06-12T03:46:34.399998-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:46:34.45906-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:46:34.459283-05:00","action":"claim","task_id":5,"detail":"shaven-finding"}
+{"timestamp":"2026-06-12T03:52:14.81898-05:00","action":"move","task_id":5,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T03:52:14.858941-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:52:14.859327-05:00","action":"release","task_id":5,"detail":"shaven-finding"}
+{"timestamp":"2026-06-12T03:52:14.928139-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:52:14.990649-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:52:14.990875-05:00","action":"claim","task_id":5,"detail":"shaven-finding"}
+{"timestamp":"2026-06-12T03:52:15.159921-05:00","action":"move","task_id":5,"detail":"checks -\u003e in-dev"}
+{"timestamp":"2026-06-12T03:52:15.189723-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:52:15.222118-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:52:15.222349-05:00","action":"release","task_id":5,"detail":"shaven-finding"}
+{"timestamp":"2026-06-12T03:52:15.730176-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:52:15.790807-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:52:15.791067-05:00","action":"claim","task_id":5,"detail":"douar-boatage"}
+{"timestamp":"2026-06-12T03:57:15.946869-05:00","action":"move","task_id":5,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T03:57:15.980046-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:57:15.980352-05:00","action":"release","task_id":5,"detail":"douar-boatage"}
+{"timestamp":"2026-06-12T03:57:16.040712-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:57:16.101063-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:57:16.101269-05:00","action":"claim","task_id":5,"detail":"douar-boatage"}
+{"timestamp":"2026-06-12T03:57:16.270816-05:00","action":"move","task_id":5,"detail":"checks -\u003e in-dev"}
+{"timestamp":"2026-06-12T03:57:16.303937-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:57:16.334655-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:57:16.334903-05:00","action":"release","task_id":5,"detail":"douar-boatage"}
+{"timestamp":"2026-06-12T03:57:16.835433-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:57:16.896353-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T03:57:16.896753-05:00","action":"claim","task_id":5,"detail":"tashie-scraped"}
+{"timestamp":"2026-06-12T04:01:37.202876-05:00","action":"move","task_id":5,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T04:01:37.236163-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T04:01:37.236399-05:00","action":"release","task_id":5,"detail":"tashie-scraped"}
+{"timestamp":"2026-06-12T04:01:37.303017-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T04:01:37.363728-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T04:01:37.364016-05:00","action":"claim","task_id":5,"detail":"tashie-scraped"}
+{"timestamp":"2026-06-12T04:01:50.85647-05:00","action":"move","task_id":5,"detail":"checks -\u003e needs-review"}
+{"timestamp":"2026-06-12T04:01:50.887441-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T04:01:50.887772-05:00","action":"release","task_id":5,"detail":"tashie-scraped"}
+{"timestamp":"2026-06-12T04:01:50.950397-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T04:01:50.980142-05:00","action":"move","task_id":5,"detail":"needs-review -\u003e in-review"}
+{"timestamp":"2026-06-12T04:01:51.010051-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T04:01:51.010282-05:00","action":"claim","task_id":5,"detail":"tashie-scraped"}
+{"timestamp":"2026-06-12T04:05:44.881449-05:00","action":"move","task_id":5,"detail":"in-review -\u003e approved"}
+{"timestamp":"2026-06-12T04:05:44.916386-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T04:05:44.916691-05:00","action":"release","task_id":5,"detail":"tashie-scraped"}
+{"timestamp":"2026-06-12T04:05:44.977899-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T04:05:45.039973-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T04:05:45.040222-05:00","action":"claim","task_id":5,"detail":"tashie-scraped"}
+{"timestamp":"2026-06-12T04:06:01.699263-05:00","action":"move","task_id":5,"detail":"approved -\u003e done"}
+{"timestamp":"2026-06-12T04:06:01.731871-05:00","action":"edit","task_id":5,"detail":"chore: epic A closeout — scaffold ready as a green base"}
+{"timestamp":"2026-06-12T04:06:01.732117-05:00","action":"release","task_id":5,"detail":"tashie-scraped"}
+{"timestamp":"2026-06-12T08:58:13.144528-05:00","action":"create","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T08:58:32.938534-05:00","action":"create","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T08:58:32.97258-05:00","action":"create","task_id":8,"detail":"feat: add Clerk magic-link sign-in and sign-out routes"}
+{"timestamp":"2026-06-12T08:58:51.104216-05:00","action":"create","task_id":9,"detail":"feat: validate Clerk sessions on protected Hono API routes"}
+{"timestamp":"2026-06-12T08:58:51.137823-05:00","action":"create","task_id":10,"detail":"feat: provision-or-refresh local user from Clerk claims"}
+{"timestamp":"2026-06-12T08:59:08.594979-05:00","action":"create","task_id":11,"detail":"feat: protect authed SvelteKit routes and redirect unauthenticated users"}
+{"timestamp":"2026-06-12T08:59:08.629205-05:00","action":"create","task_id":12,"detail":"feat: profile settings server — load, update action, persistence"}
+{"timestamp":"2026-06-12T08:59:20.91068-05:00","action":"create","task_id":13,"detail":"feat: profile settings form UI"}
+{"timestamp":"2026-06-12T08:59:20.945872-05:00","action":"create","task_id":14,"detail":"chore: epic B closeout — auth is a green base"}
+{"timestamp":"2026-06-12T09:12:13.549105-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T09:12:13.580777-05:00","action":"move","task_id":6,"detail":"ready -\u003e preflight"}
+{"timestamp":"2026-06-12T09:12:13.612374-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T09:12:13.612649-05:00","action":"claim","task_id":6,"detail":"surety-mustard"}
+{"timestamp":"2026-06-12T09:12:31.936029-05:00","action":"move","task_id":6,"detail":"preflight -\u003e in-dev"}
+{"timestamp":"2026-06-12T09:12:31.969084-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T09:12:31.969492-05:00","action":"release","task_id":6,"detail":"surety-mustard"}
+{"timestamp":"2026-06-12T09:12:32.003351-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T09:12:32.038022-05:00","action":"move","task_id":7,"detail":"ready -\u003e preflight"}
+{"timestamp":"2026-06-12T09:12:32.071129-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T09:12:32.07146-05:00","action":"claim","task_id":7,"detail":"surety-mustard"}
+{"timestamp":"2026-06-12T09:12:47.871925-05:00","action":"move","task_id":7,"detail":"preflight -\u003e in-dev"}
+{"timestamp":"2026-06-12T09:12:47.906567-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T09:12:47.906822-05:00","action":"release","task_id":7,"detail":"surety-mustard"}
+{"timestamp":"2026-06-12T09:12:47.971842-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T09:12:48.031059-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T09:12:48.031294-05:00","action":"claim","task_id":6,"detail":"surety-mustard"}
+{"timestamp":"2026-06-12T09:12:53.381492-05:00","action":"move","task_id":6,"detail":"in-dev -\u003e blocked"}
+{"timestamp":"2026-06-12T09:12:53.414433-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T09:12:53.478015-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T09:12:53.478278-05:00","action":"release","task_id":6,"detail":"surety-mustard"}
+{"timestamp":"2026-06-12T09:12:53.509852-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T09:12:53.573594-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T09:12:53.573859-05:00","action":"claim","task_id":7,"detail":"surety-mustard"}
+{"timestamp":"2026-06-12T09:20:01.20916-05:00","action":"move","task_id":7,"detail":"in-dev -\u003e blocked"}
+{"timestamp":"2026-06-12T09:20:01.24833-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T09:20:03.50059-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T09:20:03.500854-05:00","action":"release","task_id":7,"detail":"surety-mustard"}
+{"timestamp":"2026-06-12T10:22:48.967378-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:22:49.009955-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:27:04.947428-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:27:04.98018-05:00","action":"move","task_id":6,"detail":"ready -\u003e preflight"}
+{"timestamp":"2026-06-12T10:27:05.008534-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:27:05.008784-05:00","action":"claim","task_id":6,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:27:20.587138-05:00","action":"move","task_id":6,"detail":"preflight -\u003e in-dev"}
+{"timestamp":"2026-06-12T10:27:20.617272-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:27:20.617526-05:00","action":"release","task_id":6,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:27:20.647137-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:27:20.676478-05:00","action":"move","task_id":7,"detail":"ready -\u003e preflight"}
+{"timestamp":"2026-06-12T10:27:20.705716-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:27:20.705955-05:00","action":"claim","task_id":7,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:27:33.413822-05:00","action":"move","task_id":7,"detail":"preflight -\u003e in-dev"}
+{"timestamp":"2026-06-12T10:27:33.446502-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:27:33.446783-05:00","action":"release","task_id":7,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:27:33.50852-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:27:33.563915-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:27:33.564127-05:00","action":"claim","task_id":6,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:37:55.957114-05:00","action":"move","task_id":6,"detail":"in-dev -\u003e checks"}
+{"timestamp":"2026-06-12T10:37:55.992487-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:37:55.992759-05:00","action":"release","task_id":6,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:37:56.022556-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:37:56.079085-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:37:56.079336-05:00","action":"claim","task_id":7,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:52:56.379269-05:00","action":"move","task_id":7,"detail":"in-dev -\u003e blocked"}
+{"timestamp":"2026-06-12T10:52:56.409952-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:52:58.34074-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:52:58.341043-05:00","action":"release","task_id":7,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:52:58.400851-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:52:58.461917-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:52:58.462174-05:00","action":"claim","task_id":6,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:53:14.014669-05:00","action":"move","task_id":6,"detail":"checks -\u003e needs-review"}
+{"timestamp":"2026-06-12T10:53:14.043221-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:53:14.043475-05:00","action":"release","task_id":6,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:53:14.110209-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:53:14.146687-05:00","action":"move","task_id":6,"detail":"needs-review -\u003e in-review"}
+{"timestamp":"2026-06-12T10:53:14.176192-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:53:14.176455-05:00","action":"claim","task_id":6,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:56:01.272011-05:00","action":"move","task_id":6,"detail":"in-review -\u003e approved"}
+{"timestamp":"2026-06-12T10:56:01.302848-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:56:01.303095-05:00","action":"release","task_id":6,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:56:01.359137-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:56:01.419774-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:56:01.420037-05:00","action":"claim","task_id":6,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:56:16.618215-05:00","action":"move","task_id":6,"detail":"approved -\u003e done"}
+{"timestamp":"2026-06-12T10:56:16.64648-05:00","action":"edit","task_id":6,"detail":"feat: add users schema and migration"}
+{"timestamp":"2026-06-12T10:56:16.646706-05:00","action":"release","task_id":6,"detail":"chawk-monaene"}
+{"timestamp":"2026-06-12T10:58:30.80016-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:58:42.407856-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:58:42.434797-05:00","action":"move","task_id":7,"detail":"ready -\u003e preflight"}
+{"timestamp":"2026-06-12T10:58:42.4609-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:58:42.461156-05:00","action":"claim","task_id":7,"detail":"tipple-spilt"}
+{"timestamp":"2026-06-12T10:58:55.194271-05:00","action":"move","task_id":7,"detail":"preflight -\u003e in-dev"}
+{"timestamp":"2026-06-12T10:58:55.225597-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:58:55.225864-05:00","action":"release","task_id":7,"detail":"tipple-spilt"}
+{"timestamp":"2026-06-12T10:58:55.283174-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:58:55.337161-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T10:58:55.337384-05:00","action":"claim","task_id":7,"detail":"tipple-spilt"}
+{"timestamp":"2026-06-12T11:04:55.586623-05:00","action":"move","task_id":7,"detail":"in-dev -\u003e blocked"}
+{"timestamp":"2026-06-12T11:04:55.625475-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T11:04:57.518369-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T11:04:57.518658-05:00","action":"release","task_id":7,"detail":"tipple-spilt"}
+{"timestamp":"2026-06-12T11:17:10.821214-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T11:17:18.353329-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T11:17:18.386405-05:00","action":"move","task_id":7,"detail":"ready -\u003e preflight"}
+{"timestamp":"2026-06-12T11:17:18.419577-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T11:17:18.419869-05:00","action":"claim","task_id":7,"detail":"lapwork-lungfish"}
+{"timestamp":"2026-06-12T11:17:36.008357-05:00","action":"move","task_id":7,"detail":"preflight -\u003e in-dev"}
+{"timestamp":"2026-06-12T11:17:36.042882-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T11:17:36.043179-05:00","action":"release","task_id":7,"detail":"lapwork-lungfish"}
+{"timestamp":"2026-06-12T11:17:36.107284-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T11:17:36.165559-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T11:17:36.165801-05:00","action":"claim","task_id":7,"detail":"lapwork-lungfish"}
+{"timestamp":"2026-06-12T11:19:22.577087-05:00","action":"move","task_id":7,"detail":"in-dev -\u003e blocked"}
+{"timestamp":"2026-06-12T11:19:22.612925-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T11:19:24.834894-05:00","action":"edit","task_id":7,"detail":"feat: wire Clerk SvelteKit session middleware"}
+{"timestamp":"2026-06-12T11:19:24.835191-05:00","action":"release","task_id":7,"detail":"lapwork-lungfish"}
+{"timestamp":"2026-06-12T11:34:11.322634-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:34:11.356611-05:00","action":"move","task_id":7,"detail":"ready -\u003e preflight"}
+{"timestamp":"2026-06-12T11:34:11.389714-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:34:11.389985-05:00","action":"claim","task_id":7,"detail":"amra-shanty"}
+{"timestamp":"2026-06-12T11:34:26.63224-05:00","action":"move","task_id":7,"detail":"preflight -\u003e in-dev"}
+{"timestamp":"2026-06-12T11:34:26.665107-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:34:26.665481-05:00","action":"release","task_id":7,"detail":"amra-shanty"}
+{"timestamp":"2026-06-12T11:34:26.730897-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:34:26.791389-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:34:26.791672-05:00","action":"claim","task_id":7,"detail":"amra-shanty"}
+{"timestamp":"2026-06-12T11:36:39.965123-05:00","action":"move","task_id":7,"detail":"in-dev -\u003e blocked"}
+{"timestamp":"2026-06-12T11:36:39.999201-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:36:42.225939-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:36:42.226307-05:00","action":"release","task_id":7,"detail":"amra-shanty"}
+{"timestamp":"2026-06-12T11:42:48.682914-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:43:00.73335-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:43:00.767004-05:00","action":"move","task_id":7,"detail":"ready -\u003e preflight"}
+{"timestamp":"2026-06-12T11:43:00.809988-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:43:00.810271-05:00","action":"claim","task_id":7,"detail":"arsino-holl"}
+{"timestamp":"2026-06-12T11:43:17.395651-05:00","action":"move","task_id":7,"detail":"preflight -\u003e in-dev"}
+{"timestamp":"2026-06-12T11:43:17.42873-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:43:17.429027-05:00","action":"release","task_id":7,"detail":"arsino-holl"}
+{"timestamp":"2026-06-12T11:43:17.492931-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:43:17.557441-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:43:17.557729-05:00","action":"claim","task_id":7,"detail":"arsino-holl"}
+{"timestamp":"2026-06-12T11:43:51.620399-05:00","action":"move","task_id":7,"detail":"in-dev -\u003e blocked"}
+{"timestamp":"2026-06-12T11:43:51.656839-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:43:52.180184-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T11:43:52.180537-05:00","action":"release","task_id":7,"detail":"arsino-holl"}

@@ -1,10 +1,10 @@
 ---
 id: 5
 title: 'chore: epic A closeout — scaffold ready as a green base'
-status: ready
+status: done
 priority: medium
 created: 2026-06-11T11:06:41.60178-05:00
-updated: 2026-06-11T11:28:06.883701-05:00
+updated: 2026-06-12T04:06:01.731604-05:00
 tags:
     - epic-a
     - closeout
@@ -33,3 +33,15 @@ Verify the scaffold is a green, deployable base every later epic can build on.
 - [ ] All acceptance criteria met.
 - [ ] Evidence (commands run + output) captured in the task context file.
 - [ ] Epic A scope satisfied end-to-end: a deployable greenfield repo on the studio stack with migrations, CI, and conventions.
+
+[[2026-06-12]] Fri 03:52
+Committed-diff gate failed before checks:
+no commits diverging from 'main'
+committed tree is identical to 'main'
+Retry 1/3.
+
+[[2026-06-12]] Fri 03:57
+Committed-diff gate failed before checks:
+no commits diverging from 'main'
+committed tree is identical to 'main'
+Retry 2/3.

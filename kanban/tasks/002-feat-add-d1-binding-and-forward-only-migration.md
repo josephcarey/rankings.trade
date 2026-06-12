@@ -1,10 +1,10 @@
 ---
 id: 2
 title: 'feat: add D1 binding and forward-only migration runner'
-status: ready
+status: done
 priority: high
 created: 2026-06-11T11:06:41.509289-05:00
-updated: 2026-06-11T12:06:22.291328-05:00
+updated: 2026-06-12T02:47:40.281049-05:00
 started: 2026-06-11T11:46:32.615516-05:00
 tags:
     - epic-a
@@ -47,3 +47,10 @@ opencode run errored: {"name":"APIError","data":{"message":"Unauthorized: unauth
 
 [[2026-06-11]] Thu 12:00
 Base branch not green: gate "check" exited 1.
+
+[[2026-06-12]] Fri 02:21
+scripts/db-migrate.ts is a non-functional stub: it imports only `resolve` from node:path, prints three placeholder log lines, and exits without importing or calling `loadMigrations` or `runMigrations`. Running `bun run db:migrate` applies no migrations at all.
+The migration runner functions (`runMigrations`, `loadMigrations`) are never called from any application entry point or from the db:migrate CLI script — they exist only as library code exercised by tests. The acceptance criterion requiring a working runner invoked via `bun run db:migrate` is not met.
+SQL conflict: `runMigrations` pre-creates `_migrations` with `CREATE TABLE IF NOT EXISTS _migrations` before executing migration files, but `0001_init.sql` contains `CREATE TABLE _migrations` (without IF NOT EXISTS). In a real D1/SQLite environment the first migration run would throw 'table _migrations already exists'. The mock test does not detect this because `MockD1Statement.run()` silently ignores duplicate CREATE TABLE calls.
+Unit tests use a hand-rolled `MockD1Database` JavaScript mock rather than an actual SQLite / local D1 database. The acceptance criterion calls for 'a unit test against a local D1 / in-memory SQLite', and the mock's inability to enforce SQL semantics allows the SQL conflict above to go undetected.
+Retry 1/3.
