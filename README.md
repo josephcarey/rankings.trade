@@ -32,13 +32,22 @@ kanban-md --dir kanban show 1     # a single card
 
 ## Development
 
+### Setup
+
 Install dependencies with Bun:
 
 ```sh
 bun install
 ```
 
-Common scripts:
+Copy placeholder environment files for local development:
+
+```sh
+cp .env.example .env
+cp .dev.vars.example .dev.vars
+```
+
+### Common scripts
 
 ```sh
 bun run dev      # SvelteKit dev server
@@ -50,11 +59,14 @@ bun run db:migrate  # Run pending D1 migrations (note: requires local developmen
 wrangler dev     # serve the Cloudflare Worker locally after a build/sync
 ```
 
-Copy the placeholder environment files for local development when needed:
+### Verifying the scaffold
+
+To verify the scaffold is working end-to-end:
 
 ```sh
-cp .env.example .env
-cp .dev.vars.example .dev.vars
+bun run ci       # All checks, tests, and coverage pass
+bun run build    # Builds successfully for Cloudflare
+wrangler dev     # Serves / (home page) and /api/health locally
 ```
 
 Do not commit real secrets. D1 is declared as a Cloudflare binding in `wrangler.toml`; migration
