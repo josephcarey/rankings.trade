@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
 import type { CloudflareBindings } from "../platform";
+
 import { logger } from "../logger";
 
 export const api = new Hono<{ Bindings: CloudflareBindings }>().basePath(
