@@ -61,3 +61,23 @@ Files:
 Evidence: `bun run ci` -> exit 0; 143 tests passed; `snapshots.ts` 100% lines, adapter
 95.83% lines; knip clean; `bun audit` clean; svelte-check 0 errors (1 pre-existing
 warning). No network or Worker runtime — pure in-memory sql.js.
+
+## Card #19 — scrape orchestrator  ✅ DONE
+Files:
+- `src/lib/scrape/run.ts` — `runScrape(deps)` where deps = { client, db, logger,
+  scheduledTime }. Reads `resetDate` via the client, lists all agents (client returns them
+  pre-sorted credits desc/symbol asc), assigns `credit_rank = index + 1`,
+  `total_agents = agents.length`, buckets `scheduledTime` (epoch ms from
+  `event.scheduledTime`) to the minute for `observed_at`, builds `AgentSnapshotRow[]`, and
+  persists via `writeSnapshots`. Rows are built only after BOTH fetches succeed, so a
+  thrown fetch aborts with zero DB writes. Returns a `ScrapeSummary`
+  { agentsWritten, observedAt, resetDate, totalAgents } and logs "scrape complete".
+- `src/lib/scrape/run.test.ts` — 5 end-to-end tests with a fake client + sql.js adapter:
+  full capture (rank/reset/observed/ship_count/faction read-back), minute-bucketing of
+  observed_at (drops seconds/ms), idempotency across re-runs of the same slot, abort with
+  no writes when status fetch throws (asserts fetchAllAgents not called + batch spy unused),
+  abort with no writes when agent fetch throws, and empty-agent-list no-op (no batch).
+
+Evidence: `bun run ci` -> exit 0; 148 tests passed; `run.ts` 100% lines/branches; knip
+clean; `bun audit` clean; svelte-check 0 errors (1 pre-existing warning). No network — fake
+client injected.
