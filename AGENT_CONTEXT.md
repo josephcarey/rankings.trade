@@ -1,46 +1,56 @@
-# Implementation Summary: Card #9 — feat: validate Clerk sessions on protected Hono API routes
+# Implementation Summary: Card #8 — feat: add Clerk magic-link sign-in and sign-out routes
 
-> Implemented manually (Lever-2 autonomous dev is blocked by the opencode→Copilot 400). Near-verbatim
-> port of the turbotac `packages/api/src/clerk.ts` pattern using `@hono/clerk-auth`.
+> Implemented manually (Lever-2 autonomous dev blocked by the opencode→Copilot 400). UI built on
+> `svelte-clerk`'s prebuilt components; the testable logic is isolated into pure `.ts` modules + a
+> server load, since the repo has no Svelte component test tooling (Clerk's client components run the
+> real Clerk JS SDK and can't run in unit tests).
 
 ## What was built
 | File | Change |
 |---|---|
-| `src/api/auth.ts` | New — `clerkAuth` middleware (verifies Clerk session) + `requireAuth` guard (401 on guest) + `UNAUTHORIZED_ERROR` studio envelope |
-| `src/api/auth.test.ts` | New — 4 tests with a faked Clerk validator (signed-in→200, signed-out→401, no-auth→401, missing keys→throw) |
-| `src/api/app.ts` | Mounted an authed route group at `/api/me` guarded by `clerkAuth` + `requireAuth`; `/api/health` and future public reads stay open |
-| `package.json` | Added `@hono/clerk-auth@^3.1.1` |
+| `src/lib/auth/nav.ts` (+test) | `toNavState(locals)` — pure signed-in/out derivation from `locals.userId` |
+| `src/lib/auth/redirect.ts` (+test) | `safeRedirectTarget(raw)` — open-redirect-safe post-login target (same-origin path only; rejects `//`, backslash/whitespace, and the sign-in route itself) |
+| `src/routes/+layout.server.ts` (+test) | `load` returns `buildClerkProps(locals.auth())` (Clerk SSR state) + `nav: toNavState(locals)` |
+| `src/routes/+layout.svelte` | Wrap app in `<ClerkProvider>`; nav shows `<UserButton>` + `<SignOutButton redirectUrl="/">` when signed in, else a "Sign in" link |
+| `src/routes/sign-in/[...rest]/+page.svelte` | Renders Clerk `<SignIn routing="path" path="/sign-in" fallbackRedirectUrl={data.redirectTo}>` (magic-link email flow + in-component verification + sso-callback subpath) |
+| `src/routes/sign-in/[...rest]/+page.server.ts` (+test) | `load` computes the sanitized destination; redirects an already-verified user off the sign-in flow; hands guests the fallback target |
 
 ## Design
-- **`clerkAuth`** — a `MiddlewareHandler` that reads the Clerk keys per request via `getClerkKeys(context.env)`
-  (keys live on the Worker binding env, only available per request) and delegates to
-  `@hono/clerk-auth`'s `clerkMiddleware({ publishableKey, secretKey })`. Keys are passed explicitly
-  because our publishable var is `PUBLIC_`-prefixed, not the SDK's default name.
-- **`requireAuth`** — reads `getAuth(context)?.userId`; a guest (no userId) gets a `401` with the studio
-  shape `{ error: { code, message } }`; otherwise the verified identity is available to handlers via
-  `getAuth(context)`.
-- **Scoping** — the guard is applied only to an `authed` sub-app mounted at `/api/me`, NOT to all of
-  `/api`. Public API reads (leaderboard, public profiles) mount directly on `api` and stay open. This
-  satisfies the card's "do not blanket-protect all of /api".
+- **`<ClerkProvider>`** (svelte-clerk root) auto-reads `initialState` from `page.data` (provided by the
+  layout load via `buildClerkProps`) and the publishable key from `PUBLIC_CLERK_PUBLISHABLE_KEY` env —
+  no props needed. It must wrap the whole app so `<SignIn>`/`<UserButton>`/`<SignOutButton>` have Clerk context.
+- **Catch-all `/sign-in/[...rest]`** hosts Clerk's path-routed `<SignIn>` so `/sign-in`,
+  `/sign-in/sso-callback`, and any Clerk subpath all resolve to the same page+load. A rest param matches
+  zero-or-more segments, so the base `/sign-in` is covered too. (`[...rest]`, not optional `[[...rest]]`,
+  which SvelteKit's sync rejects pairing with a `+page.server.ts` cleanly.)
+- **Post-verification redirect** — after Clerk completes magic-link verification client-side and sets
+  the session cookie, navigation re-runs the load; `locals.userId` is now set, so the load redirects to
+  the sanitized destination. The same `safeRedirectTarget` value is passed to `<SignIn fallbackRedirectUrl>`
+  so Clerk's own completion lands on the intended page.
+- **Sign-out (AC2)** — Clerk `<SignOutButton redirectUrl="/">` clears the session client-side and
+  redirects to the public home. (No fake server action: only Clerk can revoke its session.)
+
+## AC4 — "callback routing tested with a faked Clerk verification (no live email)"
+Interpreted (per design constraints) as: a faked Clerk verification == authenticated `locals` on the
+callback route. `page.server.test.ts` exercises the load with callback-like URLs:
+- guest on `/sign-in/sso-callback` → no redirect, renders `<SignIn>`;
+- verified (authed locals) on `/sign-in/sso-callback?redirect_url=/dashboard` → 303 → `/dashboard`;
+- verified + open-redirect param (`//evil`) → 303 → `/`.
 
 ## Key decisions
-1. **`@hono/clerk-auth` over `@clerk/hono`** — the card and turbotac specify `@hono/clerk-auth`; it's
-   audit-clean and matches the established pattern. (`@clerk/hono` is the newer official successor but
-   is pre-1.0; the runtime deprecation notice in `@hono/clerk-auth` is cosmetic. Noted as a possible
-   future swap.) A `@clerk/backend` v2/v3 split already exists via svelte-clerk; card #9 only reads
-   `userId` (a string) so the split is immaterial here.
-2. **`clerkAuth` as a plain middleware const, not a factory** — it takes no config, so a factory's
-   returned closure tripped `unicorn/consistent-function-scoping`; a const `MiddlewareHandler` is
-   cleaner and lint-clean.
-3. **Faked-validator tests** — `getAuth` reads `context.get("clerkAuth")`, so tests set that var to a
-   fake auth function and exercise `requireAuth` directly — no live Clerk, per the AC.
+1. **Pure `.ts` seams for everything testable** — `toNavState`, `safeRedirectTarget`, and the two loads
+   are unit-tested; the `.svelte` components (uncovered) are excluded from coverage (`include: src/**/*.ts`).
+2. **Open-redirect hardening on `redirect_url`** — explicit allowlist (same-origin absolute path), plus a
+   self-redirect-loop guard for the sign-in route.
+3. **Colocated route tests named without the `+` prefix** (`layout.server.test.ts`,
+   `page.server.test.ts`) — SvelteKit reserves `+`-prefixed filenames for route files; vitest still
+   picks them up via `src/**/*.test.ts`.
 
 ## Tests / CI
-- 4 new tests; `auth.ts` at 100% coverage. Full suite: 62 tests, 10 files. `bun run ci` green.
-- The live `/api/me` handler line is intentionally uncovered (it requires a live Clerk validation);
-  global coverage 97.41% ≫ 80% floor.
+- 77 tests, 14 files; all new `.ts` at 100% coverage; global 97.79%. `bun run ci` green
+  (svelte-check 0/0, tsc, knip, eslint, `bun audit`, vitest ≥80%).
 
 ## Notes for downstream cards
-- Card #10 (provision/refresh local user) reads the verified `getAuth(context).userId` inside an authed
-  handler to attach the local user.
-- Add new authed API routes to the `authed` sub-app in `app.ts`; public reads stay on `api` directly.
+- `data.nav` (`{ signedIn, userId }`) is available to every page via the root layout.
+- Protected SvelteKit routes (card #11) can redirect guests to `/sign-in?redirect_url=<intended>`;
+  this load already honors that param safely on return.
