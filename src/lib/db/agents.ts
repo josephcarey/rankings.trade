@@ -11,7 +11,7 @@
  */
 
 /** Callsign format: 3–20 chars, upper-case alphanumerics plus `_` and `-`. */
-const SYMBOL_PATTERN = /^[A-Z0-9_-]{3,20}$/;
+export const SYMBOL_PATTERN = /^[A-Z0-9_-]{3,20}$/;
 
 /** Full agent record as stored in the database. */
 export type Agent = {
