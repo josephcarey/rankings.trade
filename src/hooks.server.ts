@@ -4,6 +4,7 @@ import { sequence } from "@sveltejs/kit/hooks";
 import { createClerkClient, withClerkHandler } from "svelte-clerk/server";
 
 import { api } from "./api/app";
+import { requireAuthHandle } from "./lib/auth/guard";
 import { createLocalUserHandle } from "./lib/auth/local-user";
 import { clerkSessionHandle } from "./lib/auth/session";
 
@@ -31,5 +32,6 @@ export const handle: Handle = sequence(
   withClerkHandler(),
   clerkSessionHandle(),
   localUserHandle,
+  requireAuthHandle,
   apiHandle,
 );
