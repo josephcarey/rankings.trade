@@ -9,6 +9,7 @@
     "build": "vite build",
     "check": "svelte-check --tsconfig ./tsconfig.json && tsc --noEmit && knip && eslint . && bun audit",
     "ci": "bun run check && bun run test",
+    "deploy": "wrangler deploy",
     "dev": "vite dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

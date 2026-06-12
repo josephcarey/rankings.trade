@@ -2,7 +2,27 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["src/api/app.ts"],
   "project": ["src/**/*.{svelte,ts}", "*.{js,ts}"],
-  "ignoreDependencies": ["@fontsource-variable/inter", "open-props"],
+  "ignoreDependencies": [
+    "@fontsource-variable/inter",
+    "open-props",
+    "svelte",
+    "vite",
+    "eslint",
+    "prettier",
+    "svelte-check",
+    "wrangler"
+  ],
+  "ignoreBinaries": [
+    "vite",
+    "svelte-check",
+    "tsc",
+    "knip",
+    "eslint",
+    "wrangler",
+    "prettier",
+    "vitest",
+    "svelte-kit"
+  ],
   "vitest": {
     "config": ["vite.config.ts"]
   }
