@@ -1,32 +1,41 @@
-# Card #13 — profile settings form UI
+# Card #14 — Epic B closeout: auth is a green base
 
 ## Summary
-The authed `/settings` page now renders a superforms-bound form for editing
-profile visibility and the dashboard link, wired to the card #12 load/action.
+Authentication & user accounts verified end-to-end as a green base for later
+epics. All Epic B cards (#6–#13, #15) are merged to `main`; `bun run ci` is green.
 
-## What changed
-- `src/routes/settings/+page.svelte` (new) — `superForm(data.form)` client form:
-  - visibility radio group (public/private) bound to `$form.visibility`.
-  - `dashboard_url` URL text input bound to `$form.dashboard_url` with a Clear
-    button (empties the field → action persists null) and inline field error.
-  - inline validation errors (`$errors`) and a success confirmation (`$message`).
-  - styled with the Epic A base tokens (open-props), accessible labels +
-    `aria-invalid`/`aria-describedby`.
+## End-to-end verification (by code trace + automated tests)
+No live Clerk creds in this environment; each boundary is verified by the
+repo's unit/integration tests (faking Clerk + an in-memory D1) plus a wiring
+trace of `hooks.server.ts` and `api/app.ts`.
 
-## Testing approach
-UI-only card. Per repo convention `.svelte` files are excluded from vitest
-coverage and there is no component-test harness; correctness of the wired
-behavior (validation, persistence, clear, success/error) is covered by card
-#12's server + schema tests. The `.svelte` is gated by `svelte-check`
-(types + a11y) in CI.
+### AC1 — sign-in → provision/refresh → settings persist → sign-out
+- Magic-link sign-in: `routes/sign-in/[...rest]` (#8), Clerk `<SignIn>`.
+- Session populated each request: `clerkSessionHandle` sets `locals.userId`/`session` (#15).
+- Local `users` row provisioned/refreshed: `localUserHandle` → `resolveLocalUser`/`provisionUser` (#10), preserving local-only fields.
+- Profile settings persist: `/settings` load+action (#12) + form UI (#13); now reachable via a signed-in **Settings** nav link added here.
+- Sign-out: `<SignOutButton>` in the layout (#8).
 
-## Evidence
-`bun run ci` green (exit 0): svelte-check 0 errors (1 benign warning — the
-standard `superForm(data.form)` initial-value idiom, non-failing), 19 test
-files, 124 tests, global coverage ≥80%.
+### AC2 — authed routes redirect when signed out; public open
+- `requireAuthHandle` in the hooks sequence redirects signed-out `/settings*` to sign-in (302, destination preserved); public paths pass (#11). Tested in `guard.test.ts`.
 
-## AC mapping
-- AC1 authed page renders a superforms-bound form → +page.svelte using superForm + #12 load/action.
-- AC2 visibility toggle + dashboard_url field reflect current values → bound to $form seeded by load.
-- AC3 inline errors on failure, confirmation on success → $errors + $message.
-- AC4 dashboard link clearable from UI → Clear button + empty→null in action.
+### AC3 — protected API 401 unauth / 200 with session
+- `/api/me` authed group runs `clerkAuth, requireAuth, attachLocalUser`; guest → 401 studio error, valid session → 200 with the local user (#9/#10). Tested in `api/auth.test.ts`.
+
+### AC4 — `bun run ci` green on `main`
+- 19 test files, 124 tests, global coverage ≥80%. svelte-check 0 errors (1 benign superForm init warning, non-failing).
+
+## Change in this card
+- `routes/+layout.svelte`: added a signed-in **Settings** nav link so the AC1
+  end-to-end flow is reachable from the UI (previously `/settings` was only
+  reachable by direct URL).
+
+## Hooks sequence (final)
+`withClerkHandler() → clerkSessionHandle() → localUserHandle → requireAuthHandle → apiHandle`
+
+## Follow-ups (non-blocking, noted for roadmap)
+- No component-level (`.svelte`) test harness; UI behavior is covered indirectly via server/schema tests. Consider `@testing-library/svelte` + jsdom if richer UI grows.
+- `joi` (unused optional superforms adapter) carries a moderate advisory; audit gate set to `--audit-level=high` per studio standard.
+
+## Result
+Epic B complete. Auth is a green base for later epics.

@@ -568,3 +568,4 @@
 {"timestamp":"2026-06-12T13:17:12.320034-05:00","action":"edit","task_id":10,"detail":"feat: provision-or-refresh local user from Clerk claims"}
 {"timestamp":"2026-06-12T13:20:16.011414-05:00","action":"edit","task_id":11,"detail":"feat: protect authed SvelteKit routes and redirect unauthenticated users"}
 {"timestamp":"2026-06-12T14:45:02.433837-05:00","action":"edit","task_id":12,"detail":"feat: profile settings server — load, update action, persistence"}
+{"timestamp":"2026-06-12T14:49:50.631733-05:00","action":"edit","task_id":13,"detail":"feat: profile settings form UI"}
