@@ -4,25 +4,29 @@
   "project": ["src/**/*.{svelte,ts}", "*.{js,ts}"],
   "ignoreDependencies": [
     "@fontsource-variable/inter",
-    "open-props",
-    "svelte",
-    "vite",
     "eslint",
+    "open-props",
     "prettier",
+    "svelte",
     "svelte-check",
+    "vite",
     "wrangler"
   ],
   "ignoreBinaries": [
-    "vite",
-    "svelte-check",
-    "tsc",
-    "knip",
     "eslint",
-    "wrangler",
+    "knip",
     "prettier",
+    "svelte-check",
+    "svelte-kit",
+    "tsc",
+    "typescript",
     "vitest",
-    "svelte-kit"
+    "vite",
+    "wrangler"
   ],
+  "eslint": {
+    "entry": ["eslint.config.js"]
+  },
   "vitest": {
     "config": ["vite.config.ts"]
   }
