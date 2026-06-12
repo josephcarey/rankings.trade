@@ -1,10 +1,11 @@
 import { Hono } from "hono";
 
 import type { CloudflareBindings } from "../platform";
-
 import { logger } from "../logger";
 
-export const api = new Hono<{ Bindings: CloudflareBindings }>().basePath("/api");
+export const api = new Hono<{ Bindings: CloudflareBindings }>().basePath(
+  "/api",
+);
 
 /**
  * Middleware that logs one canonical line per request:

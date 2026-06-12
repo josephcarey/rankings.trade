@@ -83,8 +83,8 @@ than retrofitting the bare Worker.
 - **Standings** — the ranking of a league's agents at a point in time; **final standings**
   are the standings captured at round finalization.
 - **Log** — freeform, timestamped text journal entry submitted by a bot for an agent.
-- **Milestone** — a bot-reported, narrative event (typed, tolerant ingestion). *Distinct
-  from achievements.*
+- **Milestone** — a bot-reported, narrative event (typed, tolerant ingestion). _Distinct
+  from achievements._
 - **Achievement (Phase 2)** — a **system-awarded**, verifiable accomplishment derived from
   our own data (e.g. "reached Admiral," "won a season," "top-10 finish"), as opposed to
   bot-reported milestones.
@@ -140,7 +140,7 @@ than retrofitting the bare Worker.
 19. **Titles/ranks:** space-themed tiers (Captain → Admiral, etc.) from current-season
     Universe rating via a **hybrid** scheme — fixed rating thresholds for lower tiers, and
     for the **top ~2–3 elite tiers, percentile bands that expand/contract with the number
-    of players** *combined with* an **absolute minimum rating gate** (so a small or weak
+    of players** _combined with_ an **absolute minimum rating gate** (so a small or weak
     field doesn't mint elite titles — those slots stay empty until someone clears the
     threshold). All titles also require an **established-rating floor** (RD below a
     threshold / minimum ranked rounds played). Titles archived per season.
@@ -154,6 +154,7 @@ than retrofitting the bare Worker.
 > planner should add a closeout card per epic per studio card standards.
 
 ### Epic A — Project scaffold & infrastructure
+
 **Scope:** Stand up the greenfield repo on the standard stack: SvelteKit front end, Hono
 API on Cloudflare Workers, D1 database with a migrations workflow, environment/secrets
 config, CI, and deploy. Establish project conventions (TypeScript strict, logging, error
@@ -164,6 +165,7 @@ adapter for Cloudflare; migration runner (forward-only, run-once files like toda
 **Depends on:** —
 
 ### Epic B — Authentication & user accounts
+
 **Scope:** Integrate Clerk magic-link auth (Steward pattern). Persist a local `users`
 record keyed to the Clerk user. Profile settings including visibility (public/private)
 and an optional user-supplied dashboard link. Session/route protection for authed pages
@@ -173,6 +175,7 @@ and API.
 **Depends on:** A
 
 ### Epic C — Agents & per-agent API tokens
+
 **Scope:** Let a signed-in user register/claim SpaceTraders agent callsigns (trust-based,
 no verification in v1). **One active owner per agent**; provide an admin transfer flow
 that revokes the prior owner's tokens and keeps an audit trail; show an "unverified"
@@ -186,6 +189,7 @@ disputed claims/transfers.
 **Depends on:** B
 
 ### Epic D — Scraping & snapshots (port)
+
 **Scope:** Port the 15-min cron scrape of all public SpaceTraders agents into the new
 worker, storing credits/rank/total-agents per round (`resetDate`). Drop net-worth fields;
 keep credits as the metric. (Legacy history import lives in Epic K, not here.)
@@ -195,6 +199,7 @@ credit_rank, total_agents, reset_date, observed_at, agent_symbol); chunked D1 ba
 **Depends on:** A (can proceed in parallel with B/C)
 
 ### Epic E — Leagues, membership & invites
+
 **Scope:** Create/manage leagues with name + **optional description** (e.g. to frame an
 opt-in challenge); private-by-default with configurable visibility; add agents as
 participants (**including unclaimed agents** — owner nullable); invite via a reusable,
@@ -208,6 +213,7 @@ dependency in v1 — email is used only for Clerk login.)
 **Depends on:** B, C
 
 ### Epic F — Bot ingestion API (logs & milestones)
+
 **Scope:** Token-authenticated endpoints for bots to submit freeform logs and tolerant
 milestones. Never reject milestones; store unknown types. Recognized-type registry
 (default enum + per-league custom types). Guard against abuse from a leaked token.
@@ -219,6 +225,7 @@ for logs/milestones.
 **Depends on:** C (and E for league-scoped custom milestone types)
 
 ### Epic G — Rounds & automatic finalization
+
 **Scope:** Detect universe resets (status `resetDate` change). On detection, capture final
 standings for the Universe league and each league, **freeze per-round participant
 membership**, **tag the round with its season and ranked/unranked flag**, archive the
@@ -233,6 +240,7 @@ ratings (Epic H) → (if season-close condition met) run season close (Epic I).
 **Depends on:** D, **E** (per-league finalization needs membership state)
 
 ### Epic H — Glicko-2 ratings
+
 **Scope:** Implement Glicko-2. At finalization of a **ranked** round, treat final standings
 as one rating period; expand to pairwise outcomes (higher final credits beats lower; equal
 = draw) and update each participating agent's current-season Universe rating once.
@@ -249,7 +257,9 @@ see Epic I).
 **Depends on:** G
 
 ### Epic I — Universe seasons, titles & ranks
+
 **Scope:** Season lifecycle and the title/rank system.
+
 - **Seasons:** admin creates a season with a **cutoff date**; the open season closes at the
   **first universe reset on/after that date**. On close: archive season standings + each
   agent's final rating/title, then **reset all Universe ratings to baseline** for the next
@@ -257,21 +267,22 @@ see Epic I).
   close, during which rounds are tagged unranked and excluded from ratings (Epic H).
 - **Titles/ranks:** derive a space-themed tier from current-season Universe rating via a
   **hybrid** scheme: fixed rating thresholds for lower tiers; the **top ~2–3 elite tiers
-  use percentile bands that expand/contract with the player count** *and* require an
+  use percentile bands that expand/contract with the player count** _and_ require an
   **absolute minimum-rating gate** (elite slots stay empty in a small/weak field until
   someone clears the threshold). All tiers require an **established-rating floor** (RD below
   threshold / min ranked rounds). Recompute on each ranked finalization; archive per season.
-**Hints:** `seasons` table (label, cutoff_date, opened_at, closed_at, **unranked_until**);
-`season_standings`/archive (season, agent, final rating, final rank, **title**);
-`title_tiers` config (ordered tiers: name, **lower rating threshold**, **percentile band**,
-and per-tier flags for whether it's threshold-based or percentile+gate); compute percentile
-over the **established, ranked** population only; season-close logic invoked from Epic G's
-finalization; admin UI to configure seasons + cutoff + gap length. Proposed title ladder
-(planner to confirm): Cadet → Ensign → Lieutenant → Commander → Captain → Commodore →
-Colonel → Admiral → Fleet Admiral (elite = top 2–3).
-**Depends on:** G, H
+  **Hints:** `seasons` table (label, cutoff_date, opened_at, closed_at, **unranked_until**);
+  `season_standings`/archive (season, agent, final rating, final rank, **title**);
+  `title_tiers` config (ordered tiers: name, **lower rating threshold**, **percentile band**,
+  and per-tier flags for whether it's threshold-based or percentile+gate); compute percentile
+  over the **established, ranked** population only; season-close logic invoked from Epic G's
+  finalization; admin UI to configure seasons + cutoff + gap length. Proposed title ladder
+  (planner to confirm): Cadet → Ensign → Lieutenant → Commander → Captain → Commodore →
+  Colonel → Admiral → Fleet Admiral (elite = top 2–3).
+  **Depends on:** G, H
 
 ### Epic J — UI: public, profiles, leagues
+
 **Scope:** Global "everyone" Universe leaderboard (full ranked table + top 5–10 credits
 graph + Universe ratings **with title/badge**). League pages (name + **description**,
 standings, all-participants credits graph, milestone/log display, invite-link management
@@ -285,6 +296,7 @@ title-badge styling per tier.
 **Depends on:** D, E, F, G, H, I (build incrementally as data sources land)
 
 ### Epic K — Data migration & cutover
+
 **Scope:** **Sole owner of legacy import.** One-time import of legacy snapshot history,
 deterministic historical round/rating backfill, seeding of the starter league, continuity
 verification, and production cutover.
@@ -298,6 +310,7 @@ smoke-test ratings across historical rounds.
 **Depends on:** D, E, G, H, I
 
 ### Epic L — Rules / help pages (markdown)
+
 **Scope:** A lightweight set of **rules/help pages rendered from markdown** that explain the
 concepts to newcomers: leagues & visibility, rounds & finalization, seasons & the unranked
 gap, Glicko-2 ratings, the title/rank ladder and how tiers are earned, registering agents &
@@ -310,6 +323,7 @@ markdown — no CMS. Keep the copy in sync with the locked decisions in this bri
 **Depends on:** A (content can be drafted any time; wire-up needs the scaffold)
 
 ### Epic M — Public read API for bots
+
 **Scope:** A documented, read-only HTTP API so bots/tools can fetch their own and public
 data: an agent's current rank/credits/rating/title, a league's standings, Universe
 leaderboard slices, and current season state. Public (or token-scoped where it touches
@@ -322,6 +336,7 @@ mutates.
 **Depends on:** D, E, G, H, I
 
 ### Epic N — End-of-season recognition & hall of fame
+
 **Scope:** Turn season closes into a moment: crown a **Season Champion** (top Universe
 agent), render a podium, award a persistent **per-season champion badge**, and maintain a
 **hall of fame** page listing every past season's winners/top finishers.
@@ -331,6 +346,7 @@ to display earned season badges; immutable once a season is closed.
 **Depends on:** I, J
 
 ### Epic O — Rank & rating deltas + rating-over-time
+
 **Scope:** Make movement legible: show **rank/rating deltas** ("▲3 since last round") on
 leaderboards and profiles, and a **rating-over-time graph** alongside the existing credits
 graph.
@@ -340,7 +356,8 @@ demotion arrows on the Universe leaderboard and profile.
 **Depends on:** G, H, J
 
 ### Epic P — Achievements (Phase 2)
-**Scope:** *Deferred to Phase 2 — listed so the v1 data model accommodates it.*
+
+**Scope:** _Deferred to Phase 2 — listed so the v1 data model accommodates it._
 System-awarded, verifiable achievements derived from our own data (distinct from
 bot-reported milestones), e.g. "reached Admiral," "won a season," "top-10 season finish,"
 "first to 1B credits in a league." Evaluated at round/season finalization and displayed on
@@ -444,4 +461,4 @@ Captured for later prioritization; intentionally out of v1 scope.
 - **Secondary leaderboards:** revive the old "most charts submitted" metric as a side board.
 - **Data export:** CSV export of standings/snapshots.
 - **Embeddable league widget:** an iframe/script badge to show a league's standings off-site.
-- *(Considered and deliberately skipped for now: league chat, smurf detection, payments.)*
+- _(Considered and deliberately skipped for now: league chat, smurf detection, payments.)_
