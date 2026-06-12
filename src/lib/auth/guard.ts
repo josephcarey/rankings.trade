@@ -9,9 +9,10 @@ const SIGN_IN_PATH = "/sign-in";
  * here is public (home, leaderboard, public profiles, sign-in, callbacks).
  *
  * `/settings` is the authed profile area (cards B5/B6). `/agents` is the authed
- * agent claim + token area (Epic C).
+ * agent claim + token area (Epic C). `/admin` is the authed admin area (Epic C);
+ * the admin allowlist is enforced per-route (loads 404 for non-admins).
  */
-const AUTHED_PREFIXES = ["/settings", "/agents"] as const;
+const AUTHED_PREFIXES = ["/settings", "/agents", "/admin"] as const;
 
 /**
  * Classifies whether a request path requires authentication.

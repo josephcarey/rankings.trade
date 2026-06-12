@@ -1,38 +1,35 @@
-# AGENT_CONTEXT — Card #22 (C7): bot token-auth middleware
+# AGENT_CONTEXT — Card #23: admin agent ownership transfer with audit trail
 
 ## Scope
-Authenticate bot requests via a per-agent Bearer token (a distinct, bot-only
-path — a Clerk session does NOT satisfy it) and expose the resolved agent to
-handlers. Wired to a real `/api/bot/*` route group.
+Epic C / card #23 (C8). Adds an admin-only escape hatch to transfer an agent's
+ownership to another user, revoking the prior owner's active API tokens and
+writing an audit event. Admins are an env allowlist of Clerk user IDs.
 
-## Files
-- `src/api/bot-auth.ts`:
-  - `parseBearer(header)` — extracts the token from `Authorization: Bearer <t>`.
-  - `shouldRefreshLastUsed(lastUsedAt, now, thresholdMs=10min)` — throttle predicate.
-  - `createRequireAgentToken({ now? })` — middleware factory (clock injectable);
-    parses bearer → `hashToken` (C3) → `findActiveTokenByHash` (C4) →
-    `getAgentById`; 401 on missing/malformed/unknown/revoked; on success sets
-    `agent` + `token` context vars and touches `last_used_at` only when stale.
-  - `requireAgentToken` — default wall-clock middleware.
-- `src/api/bot.ts` — `createBotApi()`: `requireAgentToken` + `GET /whoami` echoing
-  the authenticated agent (representative end-to-end protected endpoint).
-- `src/api/app.ts` — mounts `api.route("/bot", createBotApi())`.
+## What changed
+- `src/platform.ts` — added `ADMIN_CLERK_USER_IDS?: string` to `CloudflareBindings`.
+- `src/lib/auth/admin.ts` (+ test) — `isAdmin(clerkUserId, env)`: exact, case-sensitive
+  membership in the comma-split allowlist; fails closed on empty/unset/null.
+- `src/lib/db/agents.ts` — added `setAgentOwnerIfCurrent(...)`: conditional compare-and-set
+  on `owner_user_id` (null-safe `IS`), returns whether the row changed — prevents
+  stale-owner races.
+- `src/lib/agents/ownership-service.ts` (+ test) — `transferAgentOwnership(db, input)`:
+  validates input, resolves target user, compare-and-set owner, revokes exactly the prior
+  owner's active tokens, writes a `transfer` audit event. Discriminated `TransferResult`.
+- `src/api/admin.ts` (+ test) — `createAdminApi()` + `transferHandler`. Auth chain
+  clerkAuth+requireAuth+attachLocalUser; per-route `isAdmin` guard (403 for authed
+  non-admins). POST /agents/:symbol/transfer; maps reasons to 400/404/409/200.
+- `src/api/app.ts` — mounts `/api/admin`.
+- `src/routes/admin/agents/[symbol]/` — `+page.server.ts` (admin-only load 404s for
+  non-admins; `transfer` action), `+page.svelte`, `page.server.test.ts`.
+- `src/lib/auth/guard.ts` (+ test) — added `/admin` to `AUTHED_PREFIXES`.
+- `.dev.vars.example` — documented `ADMIN_CLERK_USER_IDS` (placeholder, no real secret).
 
-## Decisions
-- 401s use the studio error envelope (`{ error: { code, message } }`).
-- `last_used_at` write throttled to >=10 min staleness (null/unparseable → write)
-  to avoid per-request write amplification. SQLite UTC timestamp parsed as
-  `YYYY-MM-DDTHH:MM:SSZ`.
-- Rate limiting / body-size caps remain Epic F (out of scope).
+## Security notes
+- Admin gate is server-evaluated against env; non-admins get web 404 (unprobeable) / API 403.
+- Transfer is order-safe: compare-and-set owner first (conflict -> 409, no side effects),
+  then revoke prior owner's tokens by owner snapshot, then audit. New owner's pre-existing
+  tokens untouched. No secrets logged or persisted.
 
-## Tests (`src/api/bot-auth.test.ts`, 20)
-- parseBearer matrix (null/empty/wrong-scheme/"Bearer "/valid/trimmed).
-- shouldRefreshLastUsed: never-used, stale, within-window, exact boundary,
-  unparseable.
-- Middleware: no header / malformed / unknown / revoked → 401; valid → 200 with
-  agent on context; recent token NOT rewritten (throttle); stale token rewritten.
-
-## Evidence
-- `bun run ci` -> green. svelte-check 0 errors (2 pre-existing benign warnings).
-  27 test files, 234 tests passing.
-- Coverage: All files 95.5% lines / 85.26% branch (>=80% floor held).
+## Verification
+- `bun run ci` green: svelte-check 0 errors, tsc, knip, eslint, `bun audit` clean.
+- 31 test files / 259 tests pass. Coverage 95.59% lines / 85.58% branch (>=80% floor).

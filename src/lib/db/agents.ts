@@ -193,6 +193,32 @@ export async function setAgentOwner(
 }
 
 /**
+ * Conditionally set an agent's owner, but only when its current owner matches
+ * the expected value (null-safe). Used by the admin transfer flow to avoid
+ * overwriting a concurrent ownership change (compare-and-set on `owner_user_id`).
+ *
+ * @returns True when the agent's owner is `newOwnerId` after the attempt.
+ */
+export async function setAgentOwnerIfCurrent(
+  db: D1Database,
+  agentId: number,
+  expectedOwnerId: number | null,
+  newOwnerId: number,
+): Promise<boolean> {
+  await db
+    .prepare(
+      `UPDATE agents
+       SET owner_user_id = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND owner_user_id IS ?`,
+    )
+    .bind(newOwnerId, agentId, expectedOwnerId)
+    .run();
+
+  const agent = await getAgentById(db, agentId);
+  return agent?.owner_user_id === newOwnerId;
+}
+
+/**
  * Atomically claim an agent callsign for a user (trust-based, unverified).
  *
  * The claim is a single conditional upsert: it inserts the agent owned by the

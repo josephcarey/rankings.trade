@@ -5,3 +5,8 @@
 # runtime env (event.platform.env). Find it on the Clerk dashboard API keys page.
 CLERK_SECRET_KEY="replace-with-local-placeholder"
 ADMIN_KEY="replace-with-local-placeholder"
+
+# Comma-separated allowlist of Clerk user IDs granted admin powers (Epic C:
+# agent ownership transfer). Empty/unset means no admins. Example:
+# ADMIN_CLERK_USER_IDS="user_2abc...,user_2def..."
+ADMIN_CLERK_USER_IDS=""
