@@ -41,3 +41,23 @@ Files:
 
 Evidence: `bun run ci` -> exit 0; 138 tests passed; `src/lib/scrape` 100% lines; no
 network calls (injected fake fetch).
+
+## Card #18 — snapshot store with chunked D1 batch upsert  ✅ DONE
+Files:
+- `src/lib/db/snapshots.ts` — `writeSnapshots(db, rows)`: empty input is a no-op (no
+  batch issued); builds one prepared upsert and `.bind()`s per row; chunks into batches of
+  `D1_MAX_BATCH = 100` via `db.batch()`. `ON CONFLICT(reset_date, observed_at,
+  agent_symbol) DO UPDATE` refreshes credits/credit_rank/total_agents/ship_count/faction —
+  idempotent retries.
+- `src/lib/db/sqlite-d1-adapter.ts` — reusable executable sql.js D1 facade
+  (prepare/bind/run/all/first/batch). `bind()` returns a NEW statement to match real D1
+  immutability (so `rows.map(s => stmt.bind(...))` yields independent statements, not N
+  aliases of the last binding). Shared by the store and (next) orchestrator suites.
+- `src/lib/db/snapshots.test.ts` — 5 tests on the adapter: value persistence (rank/totals/
+  ship_count/faction read-back), empty-input no-op (batch spy not called), chunk boundary
+  (250 rows -> [100,100,50] via batch spy), idempotency (same triple updates in place, one
+  row), distinct rows across observations.
+
+Evidence: `bun run ci` -> exit 0; 143 tests passed; `snapshots.ts` 100% lines, adapter
+95.83% lines; knip clean; `bun audit` clean; svelte-check 0 errors (1 pre-existing
+warning). No network or Worker runtime — pure in-memory sql.js.
