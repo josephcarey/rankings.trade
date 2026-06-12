@@ -53,7 +53,8 @@
     <ul class="agent-list">
       {#each data.agents as agent (agent.id)}
         <li class="agent-row">
-          <span class="agent-symbol">{agent.symbol}</span>
+          <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static authed route -->
+          <a class="agent-symbol" href="/agents/{agent.symbol}">{agent.symbol}</a>
           {#if agent.verified === 0}
             <span class="badge badge-unverified">Unverified</span>
           {:else}
