@@ -109,3 +109,55 @@ The initial migration (`0001_init.sql`) creates the `_migrations` table.
 - **Worker/API:** Hono is mounted under `/api`; `GET /api/health` returns `{ "status": "ok" }`.
 - **Data:** Cloudflare D1 binding named `DB` is configured only as a binding for now.
 - **Quality:** ESLint, knip, Vitest coverage, Prettier defaults, and Bun audit gate local CI.
+
+### Logging
+
+The project uses a lightweight structured logger (`src/logger.ts`) that:
+- Emits JSON to stdout with explicit log levels (`debug`, `info`, `warn`, `error`)
+- Is compatible with both Node.js and Cloudflare Workers (no file I/O)
+- Is used by Hono middleware to log one canonical line per request
+
+Each log entry includes:
+- `level`: log level
+- `timestamp`: ISO 8601 timestamp
+- `message`: human-readable message
+- `name`: logger name (e.g., "api")
+- Optional metadata fields
+
+**No direct `console.log` in API code.** All logging goes through the structured logger.
+
+Example request log:
+```json
+{
+  "level": "info",
+  "timestamp": "2026-06-12T02:09:03.123Z",
+  "message": "request",
+  "name": "api",
+  "method": "GET",
+  "path": "/api/health",
+  "status": 200,
+  "duration": 5
+}
+```
+
+### Error Shape
+
+All API errors return a consistent shape via `src/errors.ts`:
+
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable error message"
+  }
+}
+```
+
+Error codes are machine-readable (e.g., `NOT_FOUND`, `VALIDATION_ERROR`, `UNAUTHORIZED`). Use `createErrorResponse(code, message)` to create error responses.
+
+### Theming
+
+- **CSS:** CUBE CSS + Open Props design tokens
+- **Dark mode:** Respects `prefers-color-scheme` media query
+- **Layout:** Root `+layout.svelte` renders nav shell with theme-aware styles
+

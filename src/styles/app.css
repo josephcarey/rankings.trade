@@ -25,6 +25,13 @@
   }
 }
 
+/* Reset and base styles */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html {
   background: var(--color-background);
   color: var(--color-text);
@@ -33,22 +40,34 @@ html {
 
 body {
   margin: 0;
+  padding: 0;
 }
 
+/* Focus styles */
 :focus-visible {
   outline: 0.1875rem solid var(--color-accent);
   outline-offset: 0.1875rem;
 }
 
+/* Links */
 a {
   color: var(--color-link);
+  text-decoration: none;
+  transition: color 150ms ease;
 }
 
+a:hover {
+  color: var(--color-accent);
+}
+
+/* Flow utility — consistent vertical rhythm */
 .flow > * + * {
   margin-block-start: var(--flow-space, var(--size-4));
 }
 
+/* Wrapper utility — centered max-width container */
 .wrapper {
   inline-size: min(100% - 2rem, 70rem);
   margin-inline: auto;
 }
+
