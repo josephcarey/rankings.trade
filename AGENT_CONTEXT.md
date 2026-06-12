@@ -124,3 +124,49 @@ Evidence:
 Caveats carried to closeout/ops: (1) prod needs the REAL D1 `database_id` in BOTH
 `wrangler.toml` and `wrangler.cron.toml` (both currently the Epic-A placeholder); (2) run DB
 migrations before deploying either Worker (two Workers, one D1 — keep schema-compatible).
+
+## Card #21 — Epic D closeout  ✅ DONE
+Epic D ports the legacy 15-minute scrape of all public SpaceTraders agents into the new
+worker as a credits-only snapshot pipeline. Legacy history import remains Epic K (untouched).
+
+Branch `josephcarey/epic-d-scraping-snapshots`, rebased onto `origin/main` (the duplicate
+esbuild-override commit auto-dropped as already-applied). 5 commits, 16 files:
+- #16 `714b7c4` snapshots schema migration + port-boundary types
+- #17 `b7966f9` SpaceTraders API client
+- #18 `720fcec` snapshot store with chunked D1 batch upsert
+- #19 `652a4a7` scrape orchestrator runScrape
+- #20 `ce13998` 15-min cron scrape via dedicated Worker
+
+Acceptance criteria:
+- All Epic D cards committed on the branch; `bun run ci` green (151 tests, coverage 95.9%
+  lines, well above the 80% floor); merge to `main` is via the closeout PR (this worktree
+  cannot check out `main`). Branch cleanly rebased on `origin/main`, no conflicts.
+- `0010_snapshots.sql` applies cleanly through the REAL migration runner over the full
+  on-disk set (0001, 0002, 0010) — proven by `snapshots-migration.test.ts` (asserts
+  `applied` contains `0010_snapshots` + full schema/round-trip). Migration number 0010 does
+  not collide with Epic C's 0003-0009.
+- Cron: `wrangler deploy --dry-run -c wrangler.cron.toml` -> exit 0, bundles clean, lists
+  `env.DB (rankings-trade-dev) D1 Database`; `[triggers] crons = ["*/15 * * * *"]` present.
+  The `scheduled` handler -> `scheduledScrape` -> `runScrape` -> `writeSnapshots` path is
+  verified end-to-end by unit tests against fakes + sql.js (no live network). A live
+  `wrangler dev --test-scheduled` invocation is intentionally NOT run (it would hit the live
+  SpaceTraders API and needs a migrated local D1); behaviour is covered by tests.
+- Dropped legacy fields (net_worth, chart_count, chart_rank) confirmed ABSENT from the
+  schema; kept `ship_count`; added `faction` (agent `startingFaction`) — asserted in the
+  migration test.
+- No app regressions: the SvelteKit app worker, `wrangler.toml` `main`, `svelte.config.js`,
+  and routes/assets/`/api/health` are UNCHANGED (the cron lives in a separate Worker), so
+  there is no worker-`main` change to regress.
+
+Shared-file footprint (for Epic C merge sequencing): exactly ONE line added to
+`package.json` (`deploy:cron`). `wrangler.toml`, `knip.json`, `svelte.config.js` untouched.
+
+Carried caveats / follow-ups (NOT Epic D scope):
+1. PRE-EXISTING app-wide deploy blocker: `wrangler deploy` of the SvelteKit app fails on a
+   Clerk bundling error (`@clerk/shared` export-casing drift). Reproduced on the DEFAULT
+   config with no Epic D changes. Needs a svelte-clerk/@clerk/shared version alignment
+   (Epic A/B / infra). The cron Worker is unaffected and deployable today.
+2. Prod readiness: both `wrangler.toml` and `wrangler.cron.toml` carry the Epic-A
+   placeholder D1 `database_id` (all-zeros); a real id must be set in BOTH before deploy.
+3. Ops: run DB migrations before deploying either Worker (two Workers share one D1; keep
+   schema-compatible).
