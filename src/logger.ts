@@ -33,7 +33,6 @@ export function createLogger(name: string): {
 
     // JSON logs are analyzed by structured log aggregators, not human readers.
     // console is used because it's available in both Node.js and Cloudflare Workers.
-    // @ts-expect-error - console is used for structured logging in both runtimes
     console.log(JSON.stringify(entry));
   };
 

@@ -26,7 +26,7 @@
   <div class="nav-inner wrapper">
     <button
       class="nav-brand"
-      on:click={handleNavClick}
+      onclick={handleNavClick}
       aria-label="Go to home page"
       type="button"
     >
