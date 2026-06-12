@@ -47,6 +47,19 @@ class SQLiteTestStatement {
 
 class SQLiteTestDatabase {
   constructor(private db: any) {}
+  async batch(statements: SQLiteTestStatement[]) {
+    this.db.run("SAVEPOINT batch_sp");
+    try {
+      const out = [];
+      for (const st of statements) out.push(await st.run());
+      this.db.run("RELEASE batch_sp");
+      return out;
+    } catch (error) {
+      this.db.run("ROLLBACK TO batch_sp");
+      this.db.run("RELEASE batch_sp");
+      throw error;
+    }
+  }
   prepare(sql: string) {
     return new SQLiteTestStatement(sql, this.db);
   }
@@ -248,5 +261,58 @@ describe("transferAgentOwnership", () => {
       ...overrides,
     });
     expect(result).toEqual({ ok: false, reason: "invalid_input" });
+  });
+
+  it("is all-or-nothing: a failure in the batch leaves the owner and tokens untouched", async () => {
+    const agent = await createAgent(db, { owner_user_id: aliceId, symbol: "RANKBOT" });
+    const aliceToken = await seedToken(db, agent.id, aliceId, "alice-1");
+    // Force the audit insert (last statement in the atomic batch) to fail so the
+    // whole transfer — including the owner change and token revocation — rolls back.
+    await db.prepare("DROP TABLE agent_ownership_events").run();
+
+    await expect(
+      transferAgentOwnership(db, {
+        actorUserId: adminId,
+        newOwnerClerkId: "user_bob",
+        symbol: "RANKBOT",
+      }),
+    ).rejects.toBeTruthy();
+
+    const after = await getAgentBySymbol(db, "RANKBOT");
+    expect(after?.owner_user_id).toBe(aliceId); // owner change rolled back
+    const tokens = await listTokensByAgent(db, agent.id);
+    const survived = tokens.find((t) => t.id === aliceToken.id);
+    expect(survived?.revoked_at).toBeNull(); // prior owner's token still active
+  });
+
+  it("returns conflict and writes nothing when ownership changes mid-transfer", async () => {
+    const agent = await createAgent(db, { owner_user_id: aliceId, symbol: "RANKBOT" });
+    const aliceToken = await seedToken(db, agent.id, aliceId, "alice-1");
+
+    // Simulate a concurrent transfer (to a third user) landing just before our
+    // atomic batch runs, so our compare-and-set matches no rows.
+    const racing = {
+      batch: async (statements: unknown[]) => {
+        await db
+          .prepare("UPDATE agents SET owner_user_id = ? WHERE symbol = ?")
+          .bind(adminId, "RANKBOT")
+          .run();
+        return (db as any).batch(statements);
+      },
+      prepare: (sql: string) => db.prepare(sql),
+    } as unknown as D1Database;
+
+    const result = await transferAgentOwnership(racing, {
+      actorUserId: adminId,
+      newOwnerClerkId: "user_bob",
+      symbol: "RANKBOT",
+    });
+
+    expect(result).toEqual({ ok: false, reason: "conflict" });
+    // The gated revoke/audit were no-ops: the prior owner's token is untouched
+    // and no transfer event was recorded.
+    const tokens = await listTokensByAgent(db, agent.id);
+    expect(tokens.find((t) => t.id === aliceToken.id)?.revoked_at).toBeNull();
+    expect(await events(db, agent.id)).toHaveLength(0);
   });
 });

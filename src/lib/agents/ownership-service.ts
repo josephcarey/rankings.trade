@@ -3,22 +3,21 @@
  * API and form action. Reassigns an agent to a new owner, revokes the prior
  * owner's active tokens, and writes an audit event.
  *
- * Not wrapped in a DB transaction (this codebase has no transaction helper and
- * `claimAgent` is likewise multi-statement). Ordering is chosen so the displaced
- * owner loses control first: compare-and-set the owner, then revoke the prior
- * owner's tokens, then record the audit event describing the final state. A
- * failure in a later step surfaces as a thrown error to the caller rather than a
- * silently-swallowed partial success.
+ * The three writes (owner compare-and-set, prior-owner token revocation, audit
+ * insert) run as a single atomic `db.batch` (see {@link transferOwnershipAtomic})
+ * so they are all-or-nothing: a failure in any step rolls back the owner change
+ * too, and the prior owner can never be left displaced with their tokens still
+ * live. A concurrent ownership change is surfaced as `conflict`.
  */
 
 import type { Agent } from "../db/agents";
 
-import { revokeAllActiveTokensForOwner } from "../db/agent-tokens";
+import { countActiveTokensForOwner } from "../db/agent-tokens";
 import {
+  getAgentById,
   getAgentBySymbol,
   normalizeSymbol,
-  recordOwnershipEvent,
-  setAgentOwnerIfCurrent,
+  transferOwnershipAtomic,
 } from "../db/agents";
 import { getUserByClerkId } from "../db/users";
 
@@ -58,10 +57,10 @@ export type TransferInput = {
 /**
  * Transfer an agent to a new owner with prior-owner token revocation + audit.
  *
- * Steps: validate input → resolve agent + target user → compare-and-set the
- * owner (rejecting a concurrent change as `conflict`) → revoke the prior owner's
- * active tokens (snapshot-scoped, so the new owner's own tokens are untouched) →
- * write a `transfer` audit event.
+ * Steps: validate input → resolve agent + target user → (atomic batch) compare-
+ * and-set the owner, revoke the prior owner's active tokens, write the audit
+ * event → re-read to confirm. A concurrent ownership change leaves no partial
+ * writes and is reported as `conflict`.
  */
 export async function transferAgentOwnership(
   db: D1Database,
@@ -88,25 +87,21 @@ export async function transferAgentOwnership(
     return { ok: false, reason: "unchanged" };
   }
 
-  const changed = await setAgentOwnerIfCurrent(db, agent.id, priorOwner, newUser.id);
-  if (!changed) {
-    return { ok: false, reason: "conflict" };
-  }
-
+  // Best-effort count of what the transfer revokes (reported on success only).
   const revokedTokens =
-    priorOwner === null
-      ? 0
-      : await revokeAllActiveTokensForOwner(db, agent.id, priorOwner);
+    priorOwner === null ? 0 : await countActiveTokensForOwner(db, agent.id, priorOwner);
 
-  await recordOwnershipEvent(db, {
-    actor_user_id: input.actorUserId,
-    agent_id: agent.id,
-    event_type: "transfer",
-    new_owner_user_id: newUser.id,
-    prior_owner_user_id: priorOwner,
+  await transferOwnershipAtomic(db, {
+    actorUserId: input.actorUserId,
+    agentId: agent.id,
+    newOwnerId: newUser.id,
+    priorOwnerId: priorOwner,
     reason,
   });
 
-  const updated = (await getAgentBySymbol(db, agent.symbol)) ?? agent;
+  const updated = await getAgentById(db, agent.id);
+  if (!updated || updated.owner_user_id !== newUser.id) {
+    return { ok: false, reason: "conflict" };
+  }
   return { ok: true, value: { agent: updated, priorOwnerUserId: priorOwner, revokedTokens } };
 }

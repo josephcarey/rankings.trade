@@ -34,3 +34,21 @@ green base for later epics. No new behaviour — verification + evidence only.
 Trust-based agent claims with one active owner; per-agent hashed API tokens shown
 once, listable/revocable/rotatable; bot token-auth middleware; admin transfer escape
 hatch with audit trail. All 9 cards (#16–#24) merged; CI green.
+
+## Post-review security fixes (PR #4 code review)
+Two High/defense-in-depth findings fixed:
+- **Atomic transfer** — `transferAgentOwnership` now performs the owner compare-and-set,
+  prior-owner token revocation, and audit insert as a single `db.batch([...])`
+  (all-or-nothing) via `transferOwnershipAtomic` in `agents.ts`. The revoke + audit are
+  EXISTS-gated on the CAS having taken effect, so a concurrent change is a clean no-op
+  (`conflict`) with no partial writes. Closes the hole where a mid-sequence failure left
+  the prior owner displaced but their tokens still live (and a retry short-circuited via
+  `unchanged`). Replaced `setAgentOwnerIfCurrent`/`revokeAllActiveTokensForOwner` with the
+  atomic path + a read-only `countActiveTokensForOwner`.
+- **Fail-closed bot auth** — `requireAgentToken` now rejects (401) when
+  `token.owner_user_id !== agent.owner_user_id`, so a token whose snapshot owner no longer
+  owns the agent (transfer/release) can never authenticate even if revocation was missed.
+
+Tests added: all-or-nothing rollback (audit step forced to fail → owner + tokens unchanged),
+conflict no-op (concurrent transfer mid-batch), stale-owner + released-agent bot rejection,
+`countActiveTokensForOwner`. CI green: 36 files / 291 tests, 96.29% lines / 86.17% branch.

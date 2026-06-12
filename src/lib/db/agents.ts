@@ -193,29 +193,57 @@ export async function setAgentOwner(
 }
 
 /**
- * Conditionally set an agent's owner, but only when its current owner matches
- * the expected value (null-safe). Used by the admin transfer flow to avoid
- * overwriting a concurrent ownership change (compare-and-set on `owner_user_id`).
+ * Atomically transfer an agent to a new owner: compare-and-set the owner, revoke
+ * the prior owner's active tokens, and write a `transfer` audit event — as a
+ * single D1 batch (all-or-nothing), so a failure in any step rolls the whole
+ * thing back rather than leaving the prior owner's tokens live with the owner
+ * already changed.
  *
- * @returns True when the agent's owner is `newOwnerId` after the attempt.
+ * The revoke and audit statements are gated on `EXISTS (agent now owned by
+ * newOwnerId)`, which — given sequential intra-transaction visibility — is only
+ * true once the compare-and-set in the same batch has taken effect. So a
+ * concurrent ownership change that makes the CAS match no rows leaves no partial
+ * writes. Callers detect that `conflict` by re-reading the agent afterwards.
  */
-export async function setAgentOwnerIfCurrent(
+export async function transferOwnershipAtomic(
   db: D1Database,
-  agentId: number,
-  expectedOwnerId: number | null,
-  newOwnerId: number,
-): Promise<boolean> {
-  await db
+  input: {
+    actorUserId: number;
+    agentId: number;
+    newOwnerId: number;
+    priorOwnerId: number | null;
+    reason: string | null;
+  },
+): Promise<void> {
+  const { actorUserId, agentId, newOwnerId, priorOwnerId, reason } = input;
+
+  const cas = db
     .prepare(
       `UPDATE agents
        SET owner_user_id = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND owner_user_id IS ?`,
     )
-    .bind(newOwnerId, agentId, expectedOwnerId)
-    .run();
+    .bind(newOwnerId, agentId, priorOwnerId);
 
-  const agent = await getAgentById(db, agentId);
-  return agent?.owner_user_id === newOwnerId;
+  const revoke = db
+    .prepare(
+      `UPDATE agent_tokens
+       SET revoked_at = CURRENT_TIMESTAMP
+       WHERE agent_id = ? AND owner_user_id = ? AND revoked_at IS NULL
+         AND EXISTS (SELECT 1 FROM agents WHERE id = ? AND owner_user_id = ?)`,
+    )
+    .bind(agentId, priorOwnerId, agentId, newOwnerId);
+
+  const audit = db
+    .prepare(
+      `INSERT INTO agent_ownership_events
+         (agent_id, event_type, actor_user_id, prior_owner_user_id, new_owner_user_id, reason)
+       SELECT ?, 'transfer', ?, ?, ?, ?
+       WHERE EXISTS (SELECT 1 FROM agents WHERE id = ? AND owner_user_id = ?)`,
+    )
+    .bind(agentId, actorUserId, priorOwnerId, newOwnerId, reason, agentId, newOwnerId);
+
+  await db.batch([cas, revoke, audit]);
 }
 
 /**

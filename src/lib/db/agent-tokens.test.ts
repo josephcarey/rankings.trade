@@ -4,11 +4,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   type AgentToken,
+  countActiveTokensForOwner,
   findActiveTokenByHash,
   insertToken,
   isValidLabel,
   listTokensByAgent,
-  revokeAllActiveTokensForOwner,
   revokeToken,
   rotateToken,
   touchLastUsed,
@@ -210,23 +210,26 @@ describe("revokeToken", () => {
   });
 });
 
-describe("revokeAllActiveTokensForOwner", () => {
+describe("countActiveTokensForOwner", () => {
   let db: D1Database;
   beforeEach(async () => {
     db = await makeDb();
   });
 
-  it("revokes only the named owner's active tokens for the agent", async () => {
+  it("counts only the named owner's active tokens for the agent", async () => {
     const a = await seed(db, { agent_id: 1, owner_user_id: 10 });
     const b = await seed(db, { agent_id: 1, owner_user_id: 10 });
-    const other = await seed(db, { agent_id: 1, owner_user_id: 20 });
-    await revokeToken(db, b.id, 1); // already revoked — not counted
+    await seed(db, { agent_id: 1, owner_user_id: 20 }); // different owner
+    await revokeToken(db, b.id, 1); // revoked — not counted
 
-    const count = await revokeAllActiveTokensForOwner(db, 1, 10);
-    expect(count).toBe(1); // only `a` was active for owner 10
-    expect(await findActiveTokenByHash(db, a.token_hash)).toBeNull();
-    const otherActive = await findActiveTokenByHash(db, other.token_hash);
-    expect(otherActive?.id).toBe(other.id);
+    expect(await countActiveTokensForOwner(db, 1, 10)).toBe(1); // only `a`
+    // The count is read-only: the active token stays active.
+    const stillActive = await findActiveTokenByHash(db, a.token_hash);
+    expect(stillActive?.id).toBe(a.id);
+  });
+
+  it("returns 0 when the owner has no active tokens for the agent", async () => {
+    expect(await countActiveTokensForOwner(db, 1, 99)).toBe(0);
   });
 });
 

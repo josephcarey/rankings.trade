@@ -50,6 +50,19 @@ class SQLiteTestStatement {
 
 class SQLiteTestDatabase {
   constructor(private db: any) {}
+  async batch(statements: SQLiteTestStatement[]) {
+    this.db.run("SAVEPOINT batch_sp");
+    try {
+      const out = [];
+      for (const st of statements) out.push(await st.run());
+      this.db.run("RELEASE batch_sp");
+      return out;
+    } catch (error) {
+      this.db.run("ROLLBACK TO batch_sp");
+      this.db.run("RELEASE batch_sp");
+      throw error;
+    }
+  }
   prepare(sql: string) {
     return new SQLiteTestStatement(sql, this.db);
   }

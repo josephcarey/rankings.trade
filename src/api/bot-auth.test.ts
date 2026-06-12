@@ -188,6 +188,26 @@ describe("requireAgentToken middleware", () => {
     expect(response.status).toBe(401);
   });
 
+  it("rejects a token whose snapshot owner no longer matches the agent (401)", async () => {
+    const { raw } = await seedToken();
+    // Ownership moved on (e.g. an admin transfer): the token's owner snapshot (7)
+    // no longer equals the agent's current owner. Fail closed even though the
+    // token row itself is not revoked.
+    await db
+      .prepare("UPDATE agents SET owner_user_id = ? WHERE id = ?")
+      .bind(8, 1)
+      .run();
+    const response = await get(botApp(), `Bearer ${raw}`);
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects a token after its agent is released to unowned (401)", async () => {
+    const { raw } = await seedToken();
+    await db.prepare("UPDATE agents SET owner_user_id = NULL WHERE id = ?").bind(1).run();
+    const response = await get(botApp(), `Bearer ${raw}`);
+    expect(response.status).toBe(401);
+  });
+
   it("accepts a valid token and exposes the agent to handlers", async () => {
     const { raw } = await seedToken();
     const response = await get(botApp(), `Bearer ${raw}`);

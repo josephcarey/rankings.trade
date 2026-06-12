@@ -87,6 +87,13 @@ export function createRequireAgentToken(deps: {
       return context.json(AGENT_UNAUTHORIZED, 401);
     }
 
+    // Fail closed: a token snapshots its owner at creation. If that no longer
+    // matches the agent's current owner (e.g. ownership was transferred or
+    // released), reject — so authz never rests solely on revocation having run.
+    if (token.owner_user_id !== agent.owner_user_id) {
+      return context.json(AGENT_UNAUTHORIZED, 401);
+    }
+
     if (shouldRefreshLastUsed(token.last_used_at, now())) {
       await touchLastUsed(context.env.DB, token.id);
     }

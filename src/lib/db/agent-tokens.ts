@@ -157,14 +157,14 @@ export async function revokeToken(
 }
 
 /**
- * Revoke all active tokens an agent holds for a specific (prior) owner.
+ * Count an agent's active (non-revoked) tokens for a specific owner.
  *
- * Used by the admin ownership-transfer flow so a transfer revokes exactly the
- * prior owner's tokens and never the new owner's.
+ * Used by the admin ownership-transfer flow to report how many of the prior
+ * owner's tokens the (atomic) transfer revokes.
  *
- * @returns The number of tokens revoked.
+ * @returns The number of active tokens for that owner.
  */
-export async function revokeAllActiveTokensForOwner(
+export async function countActiveTokensForOwner(
   db: D1Database,
   agentId: number,
   ownerUserId: number,
@@ -176,18 +176,7 @@ export async function revokeAllActiveTokensForOwner(
     )
     .bind(agentId, ownerUserId)
     .first<{ n: number }>();
-  const count = countRow?.n ?? 0;
-
-  await db
-    .prepare(
-      `UPDATE agent_tokens
-       SET revoked_at = CURRENT_TIMESTAMP
-       WHERE agent_id = ? AND owner_user_id = ? AND revoked_at IS NULL`,
-    )
-    .bind(agentId, ownerUserId)
-    .run();
-
-  return count;
+  return countRow?.n ?? 0;
 }
 
 /**
