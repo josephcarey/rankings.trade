@@ -1,30 +1,32 @@
-# Card #18 — Secure agent API token generation + hashing
+# Card #19 — Agent token persistence helpers
 
 ## Summary
-Added `src/lib/agents/token.ts`, a pure module that generates per-agent API
-tokens with a CSPRNG and derives their stored hash and display prefix. No DB.
+Added `src/lib/db/agent-tokens.ts`: the lifecycle DML for the `agent_tokens`
+table (create / list / look-up / revoke / bulk-revoke / rotate / touch).
 
 ## What changed
-- `generateToken()` → `{ token, hash, prefix }`:
-  - `token = "rtbot_" + base64url(32 random bytes)` from `crypto.getRandomValues`.
-  - `hash` = SHA-256 hex digest (via `crypto.subtle.digest`).
-  - `prefix` = `rtbot_` + first 6 body chars (non-secret, for listing).
-- `hashToken(token)` → stable SHA-256 hex digest for lookups.
-- `tokenPrefix(token)` → display prefix.
+- `insertToken` — persists hash + prefix + label (validates label 1–60); insert-then-reread.
+- `listTokensByAgent` — active + revoked, newest first.
+- `findActiveTokenByHash` — exact match on the UNIQUE `token_hash`, excludes revoked.
+- `revokeToken(id, agentId)` — agent-scoped, idempotent (guarded by `revoked_at IS NULL`).
+- `revokeAllActiveTokensForOwner(agentId, ownerUserId)` — returns count; used by the
+  admin transfer flow to revoke exactly the prior owner's active tokens.
+- `rotateToken` — revokes the named active token and inserts one replacement carrying
+  the same label/owner (caller supplies the new hash/prefix from `generateToken`).
+- `touchLastUsed` — unconditional stamp; the bot middleware (#22) decides throttling.
 
 ## Key decisions
-- Web Crypto only (`crypto.getRandomValues` / `crypto.subtle`); Node `crypto` avoided
-  so it runs on the Cloudflare Workers runtime.
-- SHA-256 (not bcrypt) — the secret is full-entropy random; the stored hash is the
-  UNIQUE indexed lookup key (`agent_tokens.token_hash`), so lookup is exact-match.
-- The raw token never leaves the caller except as the one-time return value; only
-  hash + prefix are intended for persistence/logging.
+- No `RETURNING` (sql.js/runtime portability) — follow the insert-then-reread convention.
+- Ownership/agent scoping on every mutation so a user can only touch their agent's tokens.
+- `isValidLabel` exported for reuse by the #21 token form schema.
 
 ## Evidence
-- `bun run ci` → green; `src/lib/agents/token.ts` 100% coverage.
-- Tests cover format, hash↔token consistency, uniqueness across 200 generations,
-  hash stability/difference, and prefix derivation.
+- `bun run ci` → green; 167 tests total; `agent-tokens.ts` 96.77% line coverage
+  (uncovered: defensive post-write-not-found throw).
+- 16 unit tests cover insert/list(active+revoked ordering)/find(active vs revoked vs
+  unknown)/revoke(scoping + idempotency)/bulk-revoke(owner-scoped + count)/rotate
+  (replacement + same label + null on wrong agent)/touch.
 
 ## Notes for downstream
-- Unblocks #19 (token persistence) and #22 (bot middleware), which call `hashToken`
-  to look tokens up by their stored hash, and #21, which calls `generateToken`.
+- Unblocks #21 (token management API/UI), #22 (bot middleware → findActiveTokenByHash +
+  touchLastUsed), #23 (admin transfer → revokeAllActiveTokensForOwner).
