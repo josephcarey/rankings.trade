@@ -12,18 +12,7 @@
     "vite",
     "wrangler"
   ],
-  "ignoreBinaries": [
-    "eslint",
-    "knip",
-    "prettier",
-    "svelte-check",
-    "svelte-kit",
-    "tsc",
-    "typescript",
-    "vitest",
-    "vite",
-    "wrangler"
-  ],
+
   "eslint": {
     "entry": ["eslint.config.js"]
   },
