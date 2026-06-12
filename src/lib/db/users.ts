@@ -33,6 +33,19 @@ export type UpsertUserInput = {
 };
 
 /**
+ * Clerk-sourced identity fields for provisioning.
+ *
+ * Unlike {@link UpsertUserInput}, the Clerk-mutable fields are required (and
+ * nullable, never `undefined`) so a provisioning call always states the current
+ * Clerk identity explicitly and never accidentally binds `undefined`.
+ */
+export type ProvisionUserInput = {
+  clerk_user_id: string;
+  display_name: string | null;
+  email: string | null;
+};
+
+/**
  * Fields that a user can update from their profile settings page.
  * Omitting a field leaves it unchanged.
  */
@@ -98,6 +111,47 @@ export async function upsertUser(
   const user = await getUserByClerkId(db, clerkUserId);
   if (!user) {
     throw new Error(`upsertUser: record not found after write (${clerkUserId})`);
+  }
+  return user;
+}
+
+/**
+ * Provision (insert-or-refresh) a user record from the current Clerk identity.
+ *
+ * Idempotent and keyed on `clerk_user_id`. On first sight the row is created
+ * with the schema defaults for the local-only fields (`visibility` = `public`,
+ * `dashboard_url` = `null`). On a repeat authenticated request the
+ * Clerk-sourced fields (`email`, `display_name`) are refreshed, while the
+ * local-only fields the user controls (`visibility`, `dashboard_url`) are
+ * **preserved** — this is the key difference from {@link upsertUser}, which
+ * overwrites them.
+ *
+ * @param db D1 database instance
+ * @param input The current Clerk identity (id + mutable Clerk fields)
+ * @returns The resulting (inserted or refreshed) user record
+ * @throws If the record cannot be read back after the write
+ */
+export async function provisionUser(
+  db: D1Database,
+  input: ProvisionUserInput,
+): Promise<User> {
+  await db
+    .prepare(
+      `INSERT INTO users (clerk_user_id, email, display_name)
+       VALUES (?, ?, ?)
+       ON CONFLICT(clerk_user_id) DO UPDATE SET
+         email        = excluded.email,
+         display_name = excluded.display_name,
+         updated_at   = CURRENT_TIMESTAMP`,
+    )
+    .bind(input.clerk_user_id, input.email, input.display_name)
+    .run();
+
+  const user = await getUserByClerkId(db, input.clerk_user_id);
+  if (!user) {
+    throw new Error(
+      `provisionUser: record not found after write (${input.clerk_user_id})`,
+    );
   }
   return user;
 }

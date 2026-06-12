@@ -2,9 +2,12 @@ import type { MiddlewareHandler } from "hono";
 
 import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
 
+import type { ClerkUserLike } from "../lib/auth/clerk-identity";
+import type { User } from "../lib/db/users";
 import type { CloudflareBindings } from "../platform";
 
 import { getClerkKeys } from "../lib/auth/clerk-keys";
+import { resolveLocalUser } from "../lib/auth/local-user";
 
 /**
  * The studio error envelope returned for an unauthenticated request to a
@@ -54,3 +57,60 @@ export const requireAuth: MiddlewareHandler = async (context, next) => {
 
   await next();
 };
+
+/**
+ * Hono context variables an authed handler can read after the auth chain runs.
+ */
+export type AuthedVariables = {
+  user: User;
+};
+
+/**
+ * Dependencies for {@link createAttachLocalUser}, injected so the middleware's
+ * orchestration is unit-testable with fakes.
+ */
+export type AttachLocalUserDeps = {
+  fetchClerkUser: (
+    context: Parameters<MiddlewareHandler>[0],
+    userId: string,
+  ) => Promise<ClerkUserLike>;
+  getDb: (context: Parameters<MiddlewareHandler>[0]) => D1Database;
+};
+
+/**
+ * Builds the middleware that provisions (or refreshes) the local user for the
+ * verified Clerk identity and attaches it to the context as `user`.
+ *
+ * Must run after {@link requireAuth} (which guarantees a `userId`). Shares the
+ * `resolveLocalUser` helper with the SvelteKit hook so provisioning behavior is
+ * identical across layers.
+ *
+ * @param deps - The Clerk-user fetcher and DB accessor.
+ */
+export function createAttachLocalUser(
+  deps: AttachLocalUserDeps,
+): MiddlewareHandler<{
+  Bindings: CloudflareBindings;
+  Variables: AuthedVariables;
+}> {
+  return async (context, next) => {
+    const userId = getAuth(context)?.userId;
+    if (userId) {
+      const user = await resolveLocalUser(deps.getDb(context), () =>
+        deps.fetchClerkUser(context, userId),
+      );
+      context.set("user", user);
+    }
+
+    await next();
+  };
+}
+
+/**
+ * Default {@link createAttachLocalUser} wiring: the Clerk user comes from the
+ * client `clerkMiddleware` attached to the context, the DB from the Worker env.
+ */
+export const attachLocalUser = createAttachLocalUser({
+  fetchClerkUser: (context, userId) => context.get("clerk").users.getUser(userId),
+  getDb: (context) => context.env.DB,
+});

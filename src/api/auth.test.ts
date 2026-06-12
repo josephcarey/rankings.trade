@@ -1,7 +1,15 @@
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 
-import { clerkAuth, requireAuth, UNAUTHORIZED_ERROR } from "./auth";
+import type { ClerkUserLike } from "../lib/auth/clerk-identity";
+import type { User } from "../lib/db/users";
+
+import {
+  clerkAuth,
+  createAttachLocalUser,
+  requireAuth,
+  UNAUTHORIZED_ERROR,
+} from "./auth";
 
 /**
  * Builds a Hono app whose Clerk auth is faked: a middleware sets `clerkAuth`
@@ -60,5 +68,63 @@ describe("clerkAuth", () => {
 
     expect(() => clerkAuth(context, next)).toThrow(/Clerk env var/);
     expect(next).not.toHaveBeenCalled();
+  });
+});
+
+describe("createAttachLocalUser", () => {
+  const CLERK_USER: ClerkUserLike = {
+    id: "user_123",
+    emailAddresses: [{ emailAddress: "ada@example.com", id: "e1" }],
+    firstName: "Ada",
+    lastName: "Lovelace",
+    primaryEmailAddressId: "e1",
+    username: null,
+  };
+
+  const PROVISIONED: User = {
+    id: 1,
+    clerk_user_id: "user_123",
+    email: "ada@example.com",
+    display_name: "Ada Lovelace",
+    visibility: "public",
+    dashboard_url: null,
+    created_at: "2026-01-01",
+    updated_at: "2026-01-01",
+  };
+
+  // Fake D1 that echoes the provisioned row back from `first()`.
+  const fakeDb = {
+    prepare: () => ({
+      bind: () => ({
+        run: () => Promise.resolve({ success: true }),
+        first: () => Promise.resolve(PROVISIONED),
+      }),
+    }),
+  } as unknown as D1Database;
+
+  function appWith(authUserId: string | null, fetchClerkUser = vi.fn((_userId: string) => Promise.resolve(CLERK_USER))) {
+    const attach = createAttachLocalUser({
+      fetchClerkUser: (_context, userId) => fetchClerkUser(userId),
+      getDb: () => fakeDb,
+    });
+    const app = new Hono<{ Variables: { user: User } }>();
+
+    app.use("*", async (context, next) => {
+      context.set("clerkAuth", (() => ({ userId: authUserId })) as never);
+      await next();
+    });
+    app.use("*", attach as never);
+    app.get("/me", (context) => context.json({ user: context.get("user") ?? null }));
+
+    return { app, fetchClerkUser };
+  }
+
+  it("provisions and attaches the local user for a verified identity", async () => {
+    const { app } = appWith("user_123");
+
+    const response = await app.request("/me");
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ user: PROVISIONED });
   });
 });

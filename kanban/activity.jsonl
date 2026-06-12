@@ -547,3 +547,21 @@
 {"timestamp":"2026-06-12T11:43:52.180184-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
 {"timestamp":"2026-06-12T11:43:52.180537-05:00","action":"release","task_id":7,"detail":"arsino-holl"}
 {"timestamp":"2026-06-12T12:18:16.925069-05:00","action":"edit","task_id":7,"detail":"feat: add Clerk SvelteKit SDK and Worker secret wiring"}
+{"timestamp":"2026-06-12T12:27:34.220101-05:00","action":"edit","task_id":15,"detail":"feat: populate Clerk session on every request via SvelteKit hooks"}
+{"timestamp":"2026-06-12T12:27:34.253472-05:00","action":"move","task_id":15,"detail":"ready -\u003e preflight"}
+{"timestamp":"2026-06-12T12:27:34.288978-05:00","action":"edit","task_id":15,"detail":"feat: populate Clerk session on every request via SvelteKit hooks"}
+{"timestamp":"2026-06-12T12:27:34.289269-05:00","action":"claim","task_id":15,"detail":"folious-billeter"}
+{"timestamp":"2026-06-12T12:27:51.662883-05:00","action":"move","task_id":15,"detail":"preflight -\u003e in-dev"}
+{"timestamp":"2026-06-12T12:27:51.695027-05:00","action":"edit","task_id":15,"detail":"feat: populate Clerk session on every request via SvelteKit hooks"}
+{"timestamp":"2026-06-12T12:27:51.695391-05:00","action":"release","task_id":15,"detail":"folious-billeter"}
+{"timestamp":"2026-06-12T12:27:51.757044-05:00","action":"edit","task_id":15,"detail":"feat: populate Clerk session on every request via SvelteKit hooks"}
+{"timestamp":"2026-06-12T12:27:51.818084-05:00","action":"edit","task_id":15,"detail":"feat: populate Clerk session on every request via SvelteKit hooks"}
+{"timestamp":"2026-06-12T12:27:51.81835-05:00","action":"claim","task_id":15,"detail":"folious-billeter"}
+{"timestamp":"2026-06-12T12:32:53.889295-05:00","action":"move","task_id":15,"detail":"in-dev -\u003e blocked"}
+{"timestamp":"2026-06-12T12:32:53.920863-05:00","action":"edit","task_id":15,"detail":"feat: populate Clerk session on every request via SvelteKit hooks"}
+{"timestamp":"2026-06-12T12:32:57.001981-05:00","action":"edit","task_id":15,"detail":"feat: populate Clerk session on every request via SvelteKit hooks"}
+{"timestamp":"2026-06-12T12:32:57.002275-05:00","action":"release","task_id":15,"detail":"folious-billeter"}
+{"timestamp":"2026-06-12T12:33:57.005122-05:00","action":"edit","task_id":15,"detail":"feat: populate Clerk session on every request via SvelteKit hooks"}
+{"timestamp":"2026-06-12T12:43:16.887729-05:00","action":"edit","task_id":15,"detail":"feat: populate Clerk session on every request via SvelteKit hooks"}
+{"timestamp":"2026-06-12T12:50:57.214008-05:00","action":"edit","task_id":9,"detail":"feat: validate Clerk sessions on protected Hono API routes"}
+{"timestamp":"2026-06-12T13:04:22.928912-05:00","action":"edit","task_id":8,"detail":"feat: add Clerk magic-link sign-in and sign-out routes"}
