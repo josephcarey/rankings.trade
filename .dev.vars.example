@@ -1,4 +1,7 @@
 # Placeholder for Cloudflare Workers local secrets used by `wrangler dev`.
 # D1 is configured as a binding in wrangler.toml; do not put real secrets here.
+
+# Clerk secret key (server-only, NEVER client-exposed). Read from the Worker
+# runtime env (event.platform.env). Find it on the Clerk dashboard API keys page.
 CLERK_SECRET_KEY="replace-with-local-placeholder"
 ADMIN_KEY="replace-with-local-placeholder"

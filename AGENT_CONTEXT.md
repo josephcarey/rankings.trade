@@ -1,97 +1,69 @@
-# Implementation Summary: Card #6 — feat: add users schema and migration
+# Implementation Summary: Card #7 — feat: add Clerk SvelteKit SDK and Worker secret wiring
 
-## What was built
+> Implemented manually by the assistant (not via the autonomous dev agent). The orchestrated runs of
+> this card were hard-blocked by an opencode forced-completion 400 (see overnight log); a likely
+> contributor was that the card named a **non-existent npm package** (`@clerk/sveltekit`), turning the
+> task unsatisfiable and driving the agent to thrash to its step cap.
 
-### Migration `0002_users.sql`
-Forward-only, append-only SQL migration that creates the `users` table with:
-- `clerk_user_id TEXT NOT NULL UNIQUE` — primary key used throughout the app
-- `email TEXT NULL`, `display_name TEXT NULL` — optional profile fields
-- `visibility TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public','private'))` — stored for later Epic J filtering
-- `dashboard_url TEXT NULL CHECK (dashboard_url IS NULL OR LENGTH(dashboard_url) <= 2048)` — bounded-length URL
-- `created_at / updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP`
+## ⚠️ Confirmed Clerk SvelteKit API surface (the spike — card #15 depends on this)
 
-### Typed query helpers `src/lib/db/users.ts`
-Three exported async functions keyed on `clerk_user_id`:
+- **There is NO first-party `@clerk/sveltekit` package on npm.** Clerk ships no official SvelteKit SDK.
+  The card/brief named one that does not exist. Decision (user-confirmed): use **`svelte-clerk`**.
+- **Dependency:** `svelte-clerk@^1.1.9` (community, actively maintained). Wraps the official
+  `@clerk/backend@3.4.8`. Peer deps satisfied by the repo: `@sveltejs/kit ^2.65`, `svelte ^5.56`.
+- **Server handler (for card #15's `hooks.server.ts`):**
+  `import { withClerkHandler } from "svelte-clerk/server";`
+  Signature: `withClerkHandler(options?: ClerkSvelteKitMiddlewareOptions): Handle`
+  where `ClerkSvelteKitMiddlewareOptions = AuthenticateRequestOptions & { debug?: boolean }`.
+- **`sequence()` chaining:** the returned value is a standard SvelteKit `Handle`, so card #15 chains it
+  via `import { sequence } from "@sveltejs/kit/hooks"` exactly as planned.
+- **Session access:** the handler populates `event.locals.auth()` (Clerk's `getAuth`-style accessor
+  from `@clerk/backend`); signed-out requests yield a null `userId`. Card #15 types `App.Locals`
+  against this.
+- **Key split (IMPORTANT):** the **secret key is sourced from the environment, NOT passed as a handler
+  option** — `svelte-clerk/env` reads `CLERK_SECRET_KEY` (and `PUBLIC_CLERK_PUBLISHABLE_KEY`) from
+  SvelteKit's env modules. `secretKey` is therefore absent from `ClerkSvelteKitMiddlewareOptions`;
+  only `publishableKey` is an option. Env var name conventions confirmed from the SDK's own messages:
+  `PUBLIC_CLERK_*` (publishable, client-safe) and `CLERK_SECRET_KEY` (server-only).
+- **Client SDK** (later card): `svelte-clerk` (root export) provides `<ClerkProvider>` + components/stores.
 
-| Helper | Purpose |
-|---|---|
-| `getUserByClerkId(db, clerkUserId)` | Point-lookup; returns `User \| null` |
-| `upsertUser(db, input)` | Insert-or-update via `ON CONFLICT DO UPDATE`; returns the resulting row |
-| `updateUserProfile(db, clerkUserId, input)` | Partial-update of display_name / visibility / dashboard_url; missing fields retain DB values; returns `User \| null` |
-
-Exported types: `User`, `Visibility`, `UpsertUserInput`, `UpdateProfileInput`.
-
-## Key decisions made
-
-1. **`ON CONFLICT DO UPDATE` for upsert** — Standard SQLite upsert syntax (supported since 3.24.0). Avoids a separate SELECT before every write; a follow-up SELECT retrieves the final row.
-
-2. **Separate SELECT for return value** — Rather than `RETURNING *`, a second `getUserByClerkId` call was used. The existing test adapter's `exec()` path works cleanly for SELECT; this avoids any ambiguity in the adapter.
-
-3. **Merge semantics for `updateUserProfile`** — A GET → merge → UPDATE pattern handles partial updates without dynamic SQL string building (which security linting flags). Fields absent from the input object keep their current DB values; fields explicitly set to `null` write NULL.
-
-4. **`Visibility` as a named exported type** — Ensures Epic J callers get a first-class type for `"public" | "private"` rather than inlining the literal union everywhere.
-
-5. **Forward-only migration** — The file only appends a new `CREATE TABLE` statement; the existing `_migrations` bookkeeping table from `0001_init.sql` tracks its application.
-
-## Files changed
+## What was built (this card — config + key handling only; no `hooks.server.ts` session logic)
 
 | File | Change |
 |---|---|
-| `migrations/0002_users.sql` | New — `users` table schema |
-| `src/lib/db/users.ts` | New — typed query helpers and exported types |
-| `src/lib/db/users.test.ts` | New — 21 unit tests |
+| `package.json` | Added `svelte-clerk@^1.1.9`; added `js-cookie: ^3.0.7` override (see security note) |
+| `src/platform.ts` | Added `CLERK_SECRET_KEY: string` to `CloudflareBindings` (Worker runtime env path) |
+| `src/lib/auth/clerk-keys.ts` | New — `getClerkKeys(env)` typed accessor + `ClerkKeys` / `ClerkKeyEnv` types |
+| `src/lib/auth/clerk-keys.test.ts` | New — 5 unit tests (present / trimmed / each-missing / empty) |
+| `.env.example` | Added `PUBLIC_CLERK_PUBLISHABLE_KEY` (name + comment, no real value) |
+| `.dev.vars.example` | Documented `CLERK_SECRET_KEY` as the server-only Worker secret |
 
-No existing files were modified.
+### Key accessor design
+- `getClerkKeys(env)` reads `PUBLIC_CLERK_PUBLISHABLE_KEY` + `CLERK_SECRET_KEY` from the runtime env
+  (Epic A's `event.platform.env` path), trims, and **throws** on missing/empty — missing auth keys are
+  an unrecoverable startup misconfiguration (per code standards, throw is reserved for exactly this).
+- `ClerkKeys.publishableKey` is typed as
+  `NonNullable<ClerkSvelteKitMiddlewareOptions["publishableKey"]>`, tying the accessor to the SDK's own
+  `withClerkHandler` option so card #15 stays in sync (this is also what proves the SDK import resolves
+  and typechecks).
+- Pure and side-effect-free: the env is passed in (no `$env/*` magic-module import), so it unit-tests
+  trivially with a fake env and stays usable from both the Worker runtime and tests.
 
-## Tests written
+## Key decisions
+1. **`svelte-clerk` over `@clerk/backend` (raw):** matches the cards' assumed `withClerkHandler` +
+   `sequence()` + `locals.auth()` surface with the least friction; keeps #7/#15 coherent.
+2. **Both keys via the runtime env object, accessor takes it as an argument:** keeps the function pure
+   and testable; the publishable key uses the `PUBLIC_` prefix so SvelteKit can also surface it to the
+   browser for the client SDK in a later card.
+3. **No `hooks.server.ts` session wiring** — deliberately deferred to card #15 (kept this turn bounded).
 
-**`src/lib/db/users.test.ts`** — 21 tests across three `describe` blocks, using an in-memory sql.js adapter (same pattern as `migrate.test.ts`):
+## Security note
+`svelte-clerk → @clerk/backend → @clerk/shared → js-cookie@<=3.0.5` carries a HIGH advisory
+(GHSA-qjx8-664m-686j, cookie-attribute injection; fixed in 3.0.7). Pinned via a `package.json`
+`overrides` entry `"js-cookie": "^3.0.7"` (matching the repo's existing `cookie` override pattern).
+`bun audit` is clean.
 
-### `getUserByClerkId` (4 tests)
-- Returns `null` for a non-existent user
-- Returns the user record when it exists
-- Exposes the `visibility` field (Epic J ready)
-- Returns `null` for a different clerk_user_id
-
-### `upsertUser` (9 tests)
-- Creates a new user with all provided fields
-- Defaults `visibility` to `'public'` when not provided
-- Defaults nullable fields to `null` when not provided
-- Updates an existing user on a second call (idempotency)
-- Does not create duplicate records on repeated upserts (uniqueness)
-- Enforces `clerk_user_id UNIQUE` on raw INSERT
-- Enforces the `visibility CHECK` constraint
-- Enforces the `dashboard_url LENGTH` CHECK constraint (> 2048 chars)
-- Accepts a dashboard_url of exactly 2048 characters
-
-### `updateUserProfile` (8 tests)
-- Returns `null` for a non-existent user
-- Updates `display_name`
-- Updates `visibility`
-- Updates `dashboard_url`
-- Sets `dashboard_url` to null explicitly
-- Leaves unspecified fields unchanged
-- Leaves all fields unchanged when input is empty
-- Enforces the `visibility CHECK` constraint on update
-- Enforces the `dashboard_url LENGTH` CHECK on update
-
-**Coverage:** 94.73% lines / 91.66% branches on `users.ts` (100% functions).
-**Overall suite:** 46 tests, 7 files — all passing. `bun run ci` green.
-
-## Issues encountered
-
-**Context-file write blocked by workspace security policy**
-The agent's sandbox denies writes to paths outside the worktree root
-(`/Users/josephcarey/rankings.trade/.trellis/worktrees/6`). The requested
-context-save path `/Users/josephcarey/rankings.trade/.agent-contexts/6.md`
-is outside the workspace and could not be written. This summary was written to
-`AGENT_CONTEXT.md` within the worktree as a fallback; the orchestrator should
-copy or move it.
-
-**ESLint fixes (minor, all resolved)**
-- Merged duplicate `./users` imports (`import type` + `import` → single `import { ..., type Visibility }`)
-- Sorted class methods alphabetically (`all` before `bind` per `perfectionist/sort-classes`)
-- Inverted a `!== undefined` ternary to satisfy `unicorn/no-negated-condition`
-
-sql.js 1.14.1 (SQLite 3.49.1) correctly enforces all CHECK constraints
-(visibility and dashboard_url length) during tests.
+## Tests / CI
+- `src/lib/auth/clerk-keys.test.ts` — 5 tests; `clerk-keys.ts` at **100%** line/branch/function coverage.
+- Full suite: 51 tests, 8 files, all passing. `svelte-check` 0/0. `bun run ci` **green** (tsc, knip,
+  eslint, `bun audit`, vitest ≥80% coverage all pass).
