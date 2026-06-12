@@ -1,39 +1,30 @@
-# Card #17 — Agents schema migration + agent/ownership DB helpers
+# Card #18 — Secure agent API token generation + hashing
 
 ## Summary
-Added the Epic C persistence foundation: migration `0003_agents.sql` (agents,
-agent_tokens, agent_ownership_events) and `src/lib/db/agents.ts` typed helpers
-that enforce one active owner per agent via an atomic conditional claim.
+Added `src/lib/agents/token.ts`, a pure module that generates per-agent API
+tokens with a CSPRNG and derives their stored hash and display prefix. No DB.
 
 ## What changed
-- `migrations/0003_agents.sql`:
-  - `agents` (symbol UNIQUE + CHECK upper-case/length, nullable owner_user_id,
-    verified default 0, timestamps).
-  - `agent_tokens` (agent_id, owner_user_id creation-time snapshot, token_hash UNIQUE,
-    token_prefix, label CHECK 1–60, last_used_at, revoked_at) + index.
-  - `agent_ownership_events` audit (event_type CHECK claim/transfer/admin_release,
-    actor/prior/new owner, reason) + index.
-- `src/lib/db/agents.ts`: `normalizeSymbol`, `isValidSymbol`, `createAgent`,
-  `getAgentBySymbol`, `getAgentById`, `listAgentsByOwner`, `claimAgent`,
-  `setAgentOwner`, `recordOwnershipEvent`.
+- `generateToken()` → `{ token, hash, prefix }`:
+  - `token = "rtbot_" + base64url(32 random bytes)` from `crypto.getRandomValues`.
+  - `hash` = SHA-256 hex digest (via `crypto.subtle.digest`).
+  - `prefix` = `rtbot_` + first 6 body chars (non-secret, for listing).
+- `hashToken(token)` → stable SHA-256 hex digest for lookups.
+- `tokenPrefix(token)` → display prefix.
 
-## Key decisions / invariants
-- **Atomic one-active-owner**: `claimAgent` uses `INSERT … ON CONFLICT(symbol) DO UPDATE
-  SET owner_user_id = excluded.owner_user_id WHERE agents.owner_user_id IS NULL`, then
-  re-reads and lets the persisted owner decide the outcome. Two racing claims can never
-  both win. A successful new claim writes a `claim` audit event.
-- `claimAgent` returns a discriminated result: claimed | already_owner | already_claimed
-  | invalid_symbol.
-- Symbols normalized (trim + upper) and validated `^[A-Z0-9_-]{3,20}$` before any write.
+## Key decisions
+- Web Crypto only (`crypto.getRandomValues` / `crypto.subtle`); Node `crypto` avoided
+  so it runs on the Cloudflare Workers runtime.
+- SHA-256 (not bcrypt) — the secret is full-entropy random; the stored hash is the
+  UNIQUE indexed lookup key (`agent_tokens.token_hash`), so lookup is exact-match.
+- The raw token never leaves the caller except as the one-time return value; only
+  hash + prefix are intended for persistence/logging.
 
 ## Evidence
-- `bunx vitest run src/lib/db/agents.test.ts` → 21 passed.
-- `bun run ci` → green; `agents.ts` line coverage 93.93% (uncovered: defensive
-  post-write-not-found throw + the lost-race branch).
-- All migrations (0001–0003) apply cleanly on a fresh sql.js DB; contested-claim smoke
-  confirmed the owner is not overwritten (owner stays 1 after user 2 attempts a claim).
+- `bun run ci` → green; `src/lib/agents/token.ts` 100% coverage.
+- Tests cover format, hash↔token consistency, uniqueness across 200 generations,
+  hash stability/difference, and prefix derivation.
 
 ## Notes for downstream
-- `SYMBOL_PATTERN`, `OwnershipEventType`, `ClaimStatus` are intentionally un-exported for
-  now (knip) — re-export when a consumer card needs them (e.g. #20's valibot schema).
-- Unblocks #19 (agent-tokens helpers) and #20 (claim API/UI).
+- Unblocks #19 (token persistence) and #22 (bot middleware), which call `hashToken`
+  to look tokens up by their stored hash, and #21, which calls `generateToken`.
