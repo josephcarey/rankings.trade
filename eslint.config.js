@@ -52,6 +52,18 @@ export default tseslint.config(
     },
   },
   {
+    files: ["src/api/**/*.ts", "src/**/*.ts"],
+    rules: {
+      "no-console": "error",
+    },
+  },
+  {
+    files: ["src/logger.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+  {
     files: ["**/*.svelte", "**/*.svelte.ts", "**/*.svelte.js"],
     languageOptions: {
       parserOptions: {

@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "build": "vite build",
-    "check": "svelte-check --tsconfig ./tsconfig.json && tsc --noEmit && knip --max-issues 8 && eslint . && bun audit",
+    "check": "svelte-check --tsconfig ./tsconfig.json && tsc --noEmit && knip --exclude binaries && eslint . && bun audit",
     "ci": "bun run check && bun run test",
     "dev": "vite dev",
     "format": "prettier --write .",

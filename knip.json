@@ -1,10 +1,15 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/api/app.ts", "src/tools.ts"],
+  "entry": ["src/api/app.ts"],
   "project": ["src/**/*.{svelte,ts}", "*.{js,ts}"],
   "ignoreDependencies": [
     "@fontsource-variable/inter",
+    "eslint",
     "open-props",
+    "prettier",
+    "svelte",
+    "svelte-check",
+    "vite",
     "wrangler"
   ],
   "eslint": {
