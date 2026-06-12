@@ -1,10 +1,10 @@
-import { getAuth } from "@hono/clerk-auth";
 import { Hono } from "hono";
 
 import type { CloudflareBindings } from "../platform";
+import type { AuthedVariables } from "./auth";
 
 import { logger } from "../logger";
-import { clerkAuth, requireAuth } from "./auth";
+import { attachLocalUser, clerkAuth, requireAuth } from "./auth";
 
 export const api = new Hono<{ Bindings: CloudflareBindings }>().basePath(
   "/api",
@@ -40,10 +40,13 @@ api.get("/health", (context) => context.json({ status: "ok" }));
  * directly on `api` and stay open — this guard is scoped to the authed class
  * only, never the whole `/api` surface.
  */
-const authed = new Hono<{ Bindings: CloudflareBindings }>();
+const authed = new Hono<{
+  Bindings: CloudflareBindings;
+  Variables: AuthedVariables;
+}>();
 
-authed.use("*", clerkAuth, requireAuth);
+authed.use("*", clerkAuth, requireAuth, attachLocalUser);
 
-authed.get("/", (context) => context.json({ userId: getAuth(context)?.userId }));
+authed.get("/", (context) => context.json({ user: context.get("user") }));
 
 api.route("/me", authed);

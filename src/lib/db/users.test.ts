@@ -2,7 +2,13 @@
 import Database from "sql.js";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { getUserByClerkId, updateUserProfile, upsertUser, type Visibility } from "./users";
+import {
+  getUserByClerkId,
+  provisionUser,
+  updateUserProfile,
+  upsertUser,
+  type Visibility,
+} from "./users";
 
 // ---------------------------------------------------------------------------
 // In-memory SQLite adapter (mirrors the one in migrate.test.ts)
@@ -347,5 +353,81 @@ describe("updateUserProfile", () => {
     await expect(
       updateUserProfile(db, "user_1", { dashboard_url: tooLong }),
     ).rejects.toThrow();
+  });
+});
+
+describe("provisionUser", () => {
+  let db: D1Database;
+
+  beforeEach(async () => {
+    const SQL = await Database();
+    const sqliteDb = new SQL.Database();
+    sqliteDb.run(USERS_SCHEMA);
+    db = new SQLiteTestDatabase(sqliteDb) as unknown as D1Database;
+  });
+
+  it("creates a new row with the schema defaults for local-only fields", async () => {
+    const user = await provisionUser(db, {
+      clerk_user_id: "user_new",
+      display_name: "Ada Lovelace",
+      email: "ada@example.com",
+    });
+
+    expect(user.clerk_user_id).toBe("user_new");
+    expect(user.email).toBe("ada@example.com");
+    expect(user.display_name).toBe("Ada Lovelace");
+    expect(user.visibility).toBe("public");
+    expect(user.dashboard_url).toBeNull();
+  });
+
+  it("is idempotent on repeat provisioning", async () => {
+    const first = await provisionUser(db, {
+      clerk_user_id: "user_1",
+      display_name: "Ada",
+      email: "ada@example.com",
+    });
+    const second = await provisionUser(db, {
+      clerk_user_id: "user_1",
+      display_name: "Ada",
+      email: "ada@example.com",
+    });
+
+    expect(second.id).toBe(first.id);
+  });
+
+  it("refreshes Clerk fields while preserving local-only fields", async () => {
+    await provisionUser(db, {
+      clerk_user_id: "user_1",
+      display_name: "Old Name",
+      email: "old@example.com",
+    });
+    // The user later sets local-only fields via the profile settings flow.
+    await updateUserProfile(db, "user_1", {
+      dashboard_url: "https://dash.example.com",
+      visibility: "private",
+    });
+
+    // A later authenticated request re-provisions with changed Clerk fields.
+    const refreshed = await provisionUser(db, {
+      clerk_user_id: "user_1",
+      display_name: "New Name",
+      email: "new@example.com",
+    });
+
+    expect(refreshed.email).toBe("new@example.com");
+    expect(refreshed.display_name).toBe("New Name");
+    expect(refreshed.visibility).toBe("private");
+    expect(refreshed.dashboard_url).toBe("https://dash.example.com");
+  });
+
+  it("stores null Clerk fields without binding undefined", async () => {
+    const user = await provisionUser(db, {
+      clerk_user_id: "user_anon",
+      display_name: null,
+      email: null,
+    });
+
+    expect(user.email).toBeNull();
+    expect(user.display_name).toBeNull();
   });
 });
