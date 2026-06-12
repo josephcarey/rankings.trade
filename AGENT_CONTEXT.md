@@ -26,3 +26,18 @@ Evidence:
 - `bunx vitest run src/lib/db/snapshots-migration.test.ts` -> 5 passed.
 - `bun run ci` -> exit 0; svelte-check 0 errors (1 pre-existing warning); knip clean;
   `bun audit` clean; 129 tests passed; coverage >= 80% floor held.
+
+## Card #17 — SpaceTraders API client  ✅ DONE
+Files:
+- `src/lib/scrape/spacetraders-client.ts` — `createSpaceTradersClient({ fetch })`
+  implementing `SpaceTradersClient`. `fetchStatus()` returns the round `resetDate`
+  (throws on non-OK / missing). `fetchAllAgents()` paginates `/agents?limit=20&page=N`,
+  maps symbol/credits/shipCount/faction (startingFaction), terminates on a short page or
+  when `meta.total` is reached, sorts credits desc then symbol asc. Throws (no partial
+  list) on any non-OK page.
+- `src/lib/scrape/spacetraders-client.test.ts` — 9 tests with a fake `fetch`: status
+  happy/abort paths, single-page mapping, tie-break sort, short-page + meta.total
+  termination (asserts page-2 stop), non-OK page abort.
+
+Evidence: `bun run ci` -> exit 0; 138 tests passed; `src/lib/scrape` 100% lines; no
+network calls (injected fake fetch).
