@@ -1,51 +1,46 @@
-# Implementation Summary: Card #15 — feat: populate Clerk session on every request via SvelteKit hooks
+# Implementation Summary: Card #9 — feat: validate Clerk sessions on protected Hono API routes
 
-> Implemented manually by the assistant. A controlled Lever-2 probe of this card (with card #7's
-> svelte-clerk dependency already installed and its API documented) reproduced the opencode→Copilot
-> 400 on the very first request — confirming the autonomous-dev blocker is opencode-fundamental, not
-> the earlier phantom-package issue. So the epic is being finished by hand.
+> Implemented manually (Lever-2 autonomous dev is blocked by the opencode→Copilot 400). Near-verbatim
+> port of the turbotac `packages/api/src/clerk.ts` pattern using `@hono/clerk-auth`.
 
 ## What was built
 | File | Change |
 |---|---|
-| `src/lib/auth/session.ts` | New — `toSessionLocals()` pure mapper + `clerkSessionHandle()` Handle factory (injectable Clerk resolver) |
-| `src/lib/auth/session.test.ts` | New — 6 unit tests (mapper + handle, signed-in/out, injected fake) |
-| `src/hooks.server.ts` | Rewrote to chain `withClerkHandler()` → `clerkSessionHandle()` → existing API handle via `sequence()` |
-| `src/hooks.server.test.ts` | Rewrote — composition test with lightweight `svelte-clerk/server` + `@sveltejs/kit/hooks` mocks |
-| `src/app.d.ts` | Added nullable `session` + `userId` to `App.Locals`; load svelte-clerk's `auth` augmentation |
+| `src/api/auth.ts` | New — `clerkAuth` middleware (verifies Clerk session) + `requireAuth` guard (401 on guest) + `UNAUTHORIZED_ERROR` studio envelope |
+| `src/api/auth.test.ts` | New — 4 tests with a faked Clerk validator (signed-in→200, signed-out→401, no-auth→401, missing keys→throw) |
+| `src/api/app.ts` | Mounted an authed route group at `/api/me` guarded by `clerkAuth` + `requireAuth`; `/api/health` and future public reads stay open |
+| `package.json` | Added `@hono/clerk-auth@^3.1.1` |
 
 ## Design
-- **Pure mapper `toSessionLocals(auth)`** — takes `Pick<SessionAuthObject, "userId" | "sessionId">`
-  (typed from `svelte-clerk/server`, which re-exports `@clerk/backend`) and returns
-  `{ session, userId }`. A session is only present when BOTH ids exist; otherwise signed-out
-  (`null`/`null`). Trivially unit-tested, no live Clerk.
-- **`clerkSessionHandle(resolveAuth?)`** — a `Handle` that reads the Clerk auth via an **injectable
-  resolver** (default `event.locals.auth()`, provided by `withClerkHandler`), writes
-  `event.locals.session` + `event.locals.userId`, then continues the chain. The injection seam is what
-  satisfies the card's "testable without live Clerk calls" requirement.
-- **`hooks.server.ts`** chains, in order: `withClerkHandler()` (populates `locals.auth`) →
-  `clerkSessionHandle()` (maps to our locals) → the existing API handle (routes `/api` to Hono). So
-  Clerk auth is available to API routes too (groundwork for card #9).
+- **`clerkAuth`** — a `MiddlewareHandler` that reads the Clerk keys per request via `getClerkKeys(context.env)`
+  (keys live on the Worker binding env, only available per request) and delegates to
+  `@hono/clerk-auth`'s `clerkMiddleware({ publishableKey, secretKey })`. Keys are passed explicitly
+  because our publishable var is `PUBLIC_`-prefixed, not the SDK's default name.
+- **`requireAuth`** — reads `getAuth(context)?.userId`; a guest (no userId) gets a `401` with the studio
+  shape `{ error: { code, message } }`; otherwise the verified identity is available to handlers via
+  `getAuth(context)`.
+- **Scoping** — the guard is applied only to an `authed` sub-app mounted at `/api/me`, NOT to all of
+  `/api`. Public API reads (leaderboard, public profiles) mount directly on `api` and stay open. This
+  satisfies the card's "do not blanket-protect all of /api".
 
 ## Key decisions
-1. **Injectable resolver over mocking the SDK in every test** — keeps the session-mapping logic pure
-   and the unit tests fast and Clerk-free; the live wiring is covered by the composition test.
-2. **Type from `svelte-clerk/server`, not `@clerk/backend` directly** — `svelte-clerk/server`
-   re-exports `@clerk/backend`, so importing `SessionAuthObject` from it avoids adding a second direct
-   dependency (knip would otherwise flag `@clerk/backend` as unlisted).
-3. **`app.d.ts` loads svelte-clerk's `auth` augmentation via `import "svelte-clerk/env"`** — the
-   triple-slash `reference types` form does not resolve the `svelte-clerk/env` subpath under
-   `moduleResolution: bundler`; the side-effect import does (app.d.ts is ambient-only, never bundled).
-4. **Lightweight `sequence` mock in the hooks test** — SvelteKit's real `sequence` needs a per-request
-   async store absent in unit tests; a faithful re-implementation (thread `resolve`, last handle calls
-   the original) lets the real composition order be asserted deterministically.
+1. **`@hono/clerk-auth` over `@clerk/hono`** — the card and turbotac specify `@hono/clerk-auth`; it's
+   audit-clean and matches the established pattern. (`@clerk/hono` is the newer official successor but
+   is pre-1.0; the runtime deprecation notice in `@hono/clerk-auth` is cosmetic. Noted as a possible
+   future swap.) A `@clerk/backend` v2/v3 split already exists via svelte-clerk; card #9 only reads
+   `userId` (a string) so the split is immaterial here.
+2. **`clerkAuth` as a plain middleware const, not a factory** — it takes no config, so a factory's
+   returned closure tripped `unicorn/consistent-function-scoping`; a const `MiddlewareHandler` is
+   cleaner and lint-clean.
+3. **Faked-validator tests** — `getAuth` reads `context.get("clerkAuth")`, so tests set that var to a
+   fake auth function and exercise `requireAuth` directly — no live Clerk, per the AC.
 
 ## Tests / CI
-- `session.test.ts` (6) + `hooks.server.test.ts` (3, incl. signed-in locals population + API routing).
-- `session.ts` and `hooks.server.ts` both at **100%** coverage. Full suite: 58 tests, 9 files.
-- `bun run ci` **green** (svelte-check 0/0, tsc, knip, eslint, `bun audit`, vitest ≥80%).
+- 4 new tests; `auth.ts` at 100% coverage. Full suite: 62 tests, 10 files. `bun run ci` green.
+- The live `/api/me` handler line is intentionally uncovered (it requires a live Clerk validation);
+  global coverage 97.41% ≫ 80% floor.
 
 ## Notes for downstream cards
-- `event.locals.userId` / `event.locals.session` are now available on every request (null when signed
-  out). Card #9 (protect Hono API routes) and #11 (protect SvelteKit routes) can read these directly.
-- `event.locals.auth()` (full Clerk `SessionAuthObject`) is also available via svelte-clerk.
+- Card #10 (provision/refresh local user) reads the verified `getAuth(context).userId` inside an authed
+  handler to attach the local user.
+- Add new authed API routes to the `authed` sub-app in `app.ts`; public reads stay on `api` directly.

@@ -1,8 +1,10 @@
+import { getAuth } from "@hono/clerk-auth";
 import { Hono } from "hono";
 
 import type { CloudflareBindings } from "../platform";
 
 import { logger } from "../logger";
+import { clerkAuth, requireAuth } from "./auth";
 
 export const api = new Hono<{ Bindings: CloudflareBindings }>().basePath(
   "/api",
@@ -31,3 +33,17 @@ api.use(async (context, next) => {
 });
 
 api.get("/health", (context) => context.json({ status: "ok" }));
+
+/**
+ * Authed API routes: every route mounted here requires a verified Clerk
+ * session. Public API reads (leaderboard, public profiles) are mounted
+ * directly on `api` and stay open — this guard is scoped to the authed class
+ * only, never the whole `/api` surface.
+ */
+const authed = new Hono<{ Bindings: CloudflareBindings }>();
+
+authed.use("*", clerkAuth, requireAuth);
+
+authed.get("/", (context) => context.json({ userId: getAuth(context)?.userId }));
+
+api.route("/me", authed);
