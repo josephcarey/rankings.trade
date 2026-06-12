@@ -53,3 +53,63 @@ stakeholder on 2026-06-11. Implementation epics inherit these as locked inputs.
 
 - Registering an agent not yet in the scrape is **allowed** — it simply has no snapshots until it
   appears publicly. Baked into card C1's acceptance criteria.
+
+---
+
+# Epic C — Agents & per-agent API tokens (design lock, card #16)
+
+Locked with the stakeholder before implementing Epic C. Cards #17–#23 inherit these as
+fixed inputs. A rubber-duck critique of the token crypto and the transfer/revocation flow
+was run during planning; its findings are folded into the decisions below.
+
+## DEC-C1 — Admin identification
+
+- Admins are identified by an **env allowlist**: `ADMIN_CLERK_USER_IDS`, a comma-separated
+  list of Clerk user IDs. A helper `isAdmin(clerkUserId, env)` returns true iff the id is in
+  the (trimmed, non-empty) list. Empty/unset ⇒ nobody is admin.
+- No role table and no role-management UI in v1. The var is added to `CloudflareBindings`
+  and documented in the env example; it holds IDs, not secrets.
+
+## DEC-C2 — Admin transfer surface
+
+- The ownership-transfer escape hatch is an **admin-only API endpoint plus a minimal
+  SvelteKit form action**. No dedicated `/admin` page in v1 (disputes are rare and handled
+  manually per the brief's trust model).
+
+## DEC-C3 — Token format, storage, and lifecycle
+
+- Token string: `rtbot_` + `base64url(32 random bytes)` from a **CSPRNG** (Web Crypto
+  `crypto.getRandomValues`; the Workers runtime has no Node `crypto`).
+- Stored as a **SHA-256 hex digest** in `agent_tokens.token_hash` with a **UNIQUE** index for
+  O(1) lookup. SHA-256 (not bcrypt) is appropriate because the secret is full-entropy random,
+  not a human password; the unique-hash equality lookup also sidesteps timing concerns.
+- A non-secret `token_prefix` (`rtbot_` + first 6 chars) is stored for display/identification.
+- The raw token is **shown exactly once** at creation and never persisted or logged.
+- **Rotate** = revoke the selected token and issue exactly one replacement carrying the same
+  label, returned once. **Revoke** sets `revoked_at`; a revoked token never authenticates.
+
+## DEC-C4 — Data model
+
+- `agents`: `id`, `symbol` (UNIQUE, normalized uppercase, `^[A-Z0-9_-]{3,20}$`),
+  `display_name` (NULL), `owner_user_id` (**NULL** → unclaimed scraped participants allowed),
+  `verified` (INTEGER, default 0 — claims are "unverified" in v1), `created_at`, `updated_at`.
+- `agent_tokens`: `id`, `agent_id`, `owner_user_id` (**creation-time owner snapshot** so a
+  transfer can revoke exactly the prior owner's tokens), `token_hash` (UNIQUE), `token_prefix`,
+  `label`, `last_used_at` (NULL), `revoked_at` (NULL), `created_at`.
+- `agent_ownership_events` (audit): `id`, `agent_id`, `event_type`
+  (`claim` | `transfer` | `admin_release`), `actor_user_id` (NULL), `prior_owner_user_id`
+  (NULL), `new_owner_user_id` (NULL), `reason` (NULL), `created_at`.
+
+## DEC-C5 — Invariants & concurrency (from the rubber-duck critique)
+
+- **One active owner per agent**, enforced atomically at the DB, not only in app code:
+  claim is `UPDATE agents SET owner_user_id = ? WHERE symbol = ? AND owner_user_id IS NULL`
+  (creating the row first if the symbol is unseen). A claim that affects 0 rows on an
+  already-owned symbol resolves to an "already claimed" outcome — never a silent overwrite.
+- **Transfer is transactional**: setting the new owner, revoking the **prior** owner's active
+  tokens (`owner_user_id = priorOwner`), and writing the audit event happen together. The new
+  owner's own (post-transfer) tokens are never caught by the revocation because revocation is
+  scoped to the prior owner's snapshot.
+- **`last_used_at` write throttling**: the bot middleware updates `last_used_at` only when the
+  stored value is older than ~10 minutes, avoiding a per-request write hotspot.
+- Rate limiting and request body-size caps remain in **Epic F** (out of Epic C scope).

@@ -20,6 +20,18 @@ describe("requiresAuth", () => {
     expect(requiresAuth("/settings/profile")).toBe(true);
   });
 
+  it("protects the agents root and its subpaths", () => {
+    expect(requiresAuth("/agents")).toBe(true);
+    expect(requiresAuth("/agents/")).toBe(true);
+    expect(requiresAuth("/agents/RANKBOT")).toBe(true);
+  });
+
+  it("protects the admin root and its subpaths", () => {
+    expect(requiresAuth("/admin")).toBe(true);
+    expect(requiresAuth("/admin/")).toBe(true);
+    expect(requiresAuth("/admin/agents/RANKBOT")).toBe(true);
+  });
+
   it.each([
     "/",
     "/leaderboard",
