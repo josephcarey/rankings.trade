@@ -11,6 +11,7 @@
     "ci": "bun run check && bun run test",
     "db:migrate": "bun scripts/db-migrate.ts",
     "deploy": "wrangler deploy",
+    "deploy:cron": "wrangler deploy -c wrangler.cron.toml",
     "dev": "vite dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

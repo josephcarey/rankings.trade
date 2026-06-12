@@ -1,0 +1,12 @@
+name = "rankings-trade-cron"
+main = "./worker/cron.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "rankings-trade-dev"
+database_id = "00000000-0000-0000-0000-000000000000"

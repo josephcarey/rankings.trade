@@ -81,3 +81,46 @@ Files:
 Evidence: `bun run ci` -> exit 0; 148 tests passed; `run.ts` 100% lines/branches; knip
 clean; `bun audit` clean; svelte-check 0 errors (1 pre-existing warning). No network — fake
 client injected.
+
+## Card #20 — wire 15-min cron scheduled handler  ✅ DONE
+Files:
+- `src/lib/scrape/scheduled.ts` — `scheduledScrape(env, event, overrides?)` seam: builds the
+  live SpaceTraders client from `globalThis.fetch`, runs `runScrape` against `env.DB` with
+  `event.scheduledTime`, logs "scrape complete", and logs+rethrows on failure. Client/logger
+  injectable for tests.
+- `src/lib/scrape/scheduled.test.ts` — 3 tests: success path (rows stored + info logged),
+  failure path (logs "scrape failed" + rethrows + no writes), and a real-client path using a
+  stubbed global fetch (proves default wiring works).
+- `worker/cron.ts` — dedicated cron Worker: `export default { async scheduled(event, env)
+  { await scheduledScrape(env, event); } }`. Awaits so a thrown scrape marks the invocation
+  failed.
+- `wrangler.cron.toml` — NEW standalone Worker config: name `rankings-trade-cron`,
+  `main = ./worker/cron.ts`, `[triggers] crons = ["*/15 * * * *"]`, `[[d1_databases]]`
+  binding `DB` -> same `database_name`/`database_id` as the app.
+- `package.json` — ONE added script `deploy:cron`. (`wrangler.toml`, `svelte.config.js`,
+  `knip.json` UNTOUCHED.)
+
+DESIGN PIVOT (validated with rubber-duck): the planned `worker/index.ts` wrapper at wrangler
+`main` is impossible — adapter-cloudflare v7 overwrites `wrangler.main` with its own
+generated fetch-only worker on every build (confirmed in adapter source: `worker_dest =
+wrangler_config.main; rimraf; copy(template)`, and empirically — my wrapper got clobbered).
+A dedicated cron Worker sharing the D1 binding sidesteps the adapter entirely and the app's
+bundle.
+
+PRE-EXISTING BLOCKER (flagged to orchestrator, OUT OF SCOPE for Epic D): `wrangler deploy` of
+the SvelteKit app fails app-wide on a Clerk bundling error — `No matching export in
+@clerk/shared/.../loadClerkJsScript.mjs for import "setClerkJSLoadingErrorPackageName"`
+(casing drift between svelte-clerk and @clerk/shared). Reproduced with the DEFAULT config
+(no cron), so it is not introduced by Epic D. The cron Worker imports only
+`src/lib/scrape/*` + `src/logger.ts` (never SvelteKit/Clerk) and is therefore independently
+deployable today.
+
+Evidence:
+- `bunx wrangler deploy --dry-run -c wrangler.cron.toml` -> exit 0; "Total Upload 26.45 KiB";
+  bindings table lists `env.DB (rankings-trade-dev)  D1 Database`.
+- `bun run ci` -> exit 0; 151 tests passed (24 files); `scheduled.ts` 100% lines; knip clean;
+  `bun audit` clean; svelte-check 0 errors (1 pre-existing warning). No network in tests.
+
+Caveats carried to closeout/ops: (1) prod needs the REAL D1 `database_id` in BOTH
+`wrangler.toml` and `wrangler.cron.toml` (both currently the Epic-A placeholder); (2) run DB
+migrations before deploying either Worker (two Workers, one D1 — keep schema-compatible).
