@@ -565,3 +565,4 @@
 {"timestamp":"2026-06-12T12:43:16.887729-05:00","action":"edit","task_id":15,"detail":"feat: populate Clerk session on every request via SvelteKit hooks"}
 {"timestamp":"2026-06-12T12:50:57.214008-05:00","action":"edit","task_id":9,"detail":"feat: validate Clerk sessions on protected Hono API routes"}
 {"timestamp":"2026-06-12T13:04:22.928912-05:00","action":"edit","task_id":8,"detail":"feat: add Clerk magic-link sign-in and sign-out routes"}
+{"timestamp":"2026-06-12T13:17:12.320034-05:00","action":"edit","task_id":10,"detail":"feat: provision-or-refresh local user from Clerk claims"}

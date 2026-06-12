@@ -1,43 +1,35 @@
-# Card #10 — provision-or-refresh local user from Clerk claims
+# Card #11 — protect authed SvelteKit routes and redirect unauthenticated users
 
 ## Summary
-Every authenticated principal now resolves to a local `users` row, kept in sync
-with Clerk and exposed to both the SvelteKit (`locals.user`) and Hono
-(`c.get("user")`) layers via one shared helper.
+Server-side route guard: signed-out requests for authed paths (`/settings*`)
+redirect to sign-in with the intended destination preserved; public paths and
+authenticated requests pass through. Guard runs in the hooks sequence, so
+protected content never flashes client-side.
 
 ## What changed
-- `src/lib/db/users.ts` — added `ProvisionUserInput` + `provisionUser(db, input)`:
-  `INSERT ... ON CONFLICT(clerk_user_id) DO UPDATE SET email, display_name, updated_at`.
-  Unlike `upsertUser` (card #6), it preserves local-only fields (`visibility`,
-  `dashboard_url`) on refresh — AC2.
-- `src/lib/auth/clerk-identity.ts` (new) — `ClerkUserLike` structural type +
-  pure `clerkIdentity(user)` mapper (primary email → first email → null;
-  display_name = first+last → username → null). Version-agnostic across the
-  @clerk/backend v2/v3 split.
-- `src/lib/auth/local-user.ts` (new) — `resolveLocalUser(db, fetchClerkUser)` +
-  `createLocalUserHandle(deps)` SvelteKit handle factory (defaults `locals.user`
-  to null, skips `/api` so Hono owns API provisioning, provisions on authed
-  non-api requests).
-- `src/hooks.server.ts` — `localUserHandle` added to the sequence (after the
-  Clerk session handle, before the API handle).
-- `src/api/auth.ts` — `AuthedVariables`, `AttachLocalUserDeps`,
-  `createAttachLocalUser(deps)` factory + default `attachLocalUser`.
-- `src/api/app.ts` — authed group typed with `Variables: AuthedVariables`,
-  runs `clerkAuth, requireAuth, attachLocalUser`; `/api/me` returns the local user.
-- `src/app.d.ts` — `App.Locals.user: User | null`.
+- `src/lib/auth/guard.ts` (new):
+  - `requiresAuth(pathname)` — pure classifier; `/settings` + subpaths are authed,
+    everything else public.
+  - `signInRedirect(pathname, search)` — builds `/sign-in?redirect_url=<encoded>`
+    (param matches the existing sign-in route's `redirect_url`/`safeRedirectTarget`).
+  - `requireAuthHandle` — SvelteKit `Handle`: `redirect(302, …)` for signed-out
+    authed requests, else `resolve(event)`.
+- `src/hooks.server.ts` — `requireAuthHandle` added to the sequence after
+  `localUserHandle` (Clerk session → local user → guard → api).
 
-## Tests
-- `users.test.ts` — provisionUser: new-row defaults, idempotency, refresh-preserves-local-fields, null Clerk fields.
-- `clerk-identity.test.ts` — email/name selection + fallbacks + all-null.
-- `local-user.test.ts` — resolveLocalUser + handle (authed page provisions/attaches; guest → null, no fetch; `/api` skipped; db unavailable → null).
-- `auth.test.ts` — `createAttachLocalUser` provisions + attaches for a verified identity.
+## Tests (`guard.test.ts`)
+- `requiresAuth`: settings root/subpaths → true; home, leaderboard, public
+  profile, sign-in, callback, /api → false; prefix-only collision (`/settings-export`) → false.
+- `signInRedirect`: encodes pathname; preserves+encodes query string.
+- `requireAuthHandle`: signed-out on `/settings` → 302 with encoded destination,
+  resolve not called; signed-in → passes; signed-out on public → passes.
 
 ## Evidence
-`bun run ci` green: 16 test files, 94 tests, global line coverage 94.25% (≥80% floor).
-All new `src/lib/auth/*.ts` at 100% coverage.
+`bun run ci` green: 17 test files, 107 tests, guard.ts 100% coverage,
+global ≥80%.
 
 ## AC mapping
-- AC1 idempotent upsert keyed by clerk_user_id → provisionUser + tests.
-- AC2 refresh mutable fields, preserve local-only → ON CONFLICT update set + preservation test.
-- AC3 local user on SvelteKit locals + Hono context → localUserHandle + attachLocalUser.
-- AC4 unit-tested → above.
+- AC1 server-side redirect preserving destination → requireAuthHandle + signInRedirect.
+- AC2 public routes open when signed out → requiresAuth false for public + handle test.
+- AC3 server-side, no client flash → runs in hooks.server.ts sequence.
+- AC4 tested signed-in + signed-out → handle tests cover both.
