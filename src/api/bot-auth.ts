@@ -8,6 +8,7 @@ import { createErrorResponse } from "../errors";
 import { hashToken } from "../lib/agents/token";
 import { findActiveTokenByHash, touchLastUsed } from "../lib/db/agent-tokens";
 import { getAgentById } from "../lib/db/agents";
+import { logger } from "../logger";
 
 /** Studio error envelope for a request lacking a valid agent token. */
 const AGENT_UNAUTHORIZED = createErrorResponse(
@@ -94,8 +95,17 @@ export function createRequireAgentToken(deps: {
       return context.json(AGENT_UNAUTHORIZED, 401);
     }
 
+    // Advisory only: a transient failure on the `last_used_at` write must never
+    // reject an otherwise-valid auth, so it is best-effort and swallowed.
     if (shouldRefreshLastUsed(token.last_used_at, now())) {
-      await touchLastUsed(context.env.DB, token.id);
+      try {
+        await touchLastUsed(context.env.DB, token.id);
+      } catch (error) {
+        logger.warn("touchLastUsed failed", {
+          tokenId: token.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
 
     context.set("agent", agent);

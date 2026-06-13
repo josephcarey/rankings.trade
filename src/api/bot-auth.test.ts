@@ -1,13 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Hono } from "hono";
+import { fileURLToPath } from "node:url";
 import Database from "sql.js";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BotVariables } from "./bot-auth";
 
 import { generateToken } from "../lib/agents/token";
 import { insertToken, revokeToken } from "../lib/db/agent-tokens";
 import { createAgent } from "../lib/db/agents";
+import { loadMigrations } from "../lib/db/loader";
+import { runMigrations } from "../lib/db/migrate";
+import { createSqliteD1 } from "../lib/db/sqlite-d1-adapter";
+import { logger } from "../logger";
 import {
   createRequireAgentToken,
   parseBearer,
@@ -15,73 +20,27 @@ import {
   shouldRefreshLastUsed,
 } from "./bot-auth";
 
-class SQLiteTestStatement {
-  private bindings: unknown[] = [];
-  constructor(
-    private sql: string,
-    private db: any,
-  ) {}
-  async all<T>(): Promise<{ results: T[]; success: true }> {
-    const results = this.db.exec(this.sql, this.bindings);
-    if (results.length === 0 || !results[0]) return { results: [], success: true };
-    const columns = results[0].columns as string[];
-    const rows = (results[0].values as unknown[][]).map((values) => {
-      const row: Record<string, unknown> = {};
-      for (const [index, col] of columns.entries()) row[col] = values[index];
-      return row as T;
-    });
-    return { results: rows, success: true };
-  }
-  bind(...params: unknown[]) {
-    this.bindings = params;
-    return this;
-  }
-  async first<T>(): Promise<T | undefined> {
-    const results = this.db.exec(this.sql, this.bindings);
-    if (results.length > 0 && results[0]?.values?.length > 0) {
-      const columns = results[0].columns as string[];
-      const values = results[0].values[0] as unknown[];
-      const row: Record<string, unknown> = {};
-      for (const [index, col] of columns.entries()) row[col] = values[index];
-      return row as T;
-    }
-    return undefined;
-  }
-  async run() {
-    this.db.run(this.sql, this.bindings);
-    return { success: true };
-  }
-}
+const migrationsDir = fileURLToPath(
+  new URL("../../migrations", import.meta.url),
+);
 
-class SQLiteTestDatabase {
-  constructor(private db: any) {}
-  prepare(sql: string) {
-    return new SQLiteTestStatement(sql, this.db);
-  }
+/**
+ * Wrap a D1 facade so the advisory `touchLastUsed` write fails, simulating a transient D1
+ * error on an otherwise-valid auth (audit §6.3). Every other statement passes through.
+ */
+function dbWithFailingTouch(inner: D1Database): D1Database {
+  return new Proxy(inner, {
+    get(target, prop, receiver) {
+      if (prop !== "prepare") return Reflect.get(target, prop, receiver);
+      return (sql: string) => {
+        if (sql.includes("UPDATE agent_tokens SET last_used_at")) {
+          throw new Error("simulated transient D1 failure");
+        }
+        return target.prepare(sql);
+      };
+    },
+  });
 }
-
-const SCHEMA = `
-  CREATE TABLE agents (
-    id            INTEGER  PRIMARY KEY AUTOINCREMENT,
-    symbol        TEXT     NOT NULL UNIQUE,
-    display_name  TEXT     NULL,
-    owner_user_id INTEGER  NULL,
-    verified      INTEGER  NOT NULL DEFAULT 0,
-    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-  CREATE TABLE agent_tokens (
-    id            INTEGER  PRIMARY KEY AUTOINCREMENT,
-    agent_id      INTEGER  NOT NULL,
-    owner_user_id INTEGER  NOT NULL,
-    token_hash    TEXT     NOT NULL UNIQUE,
-    token_prefix  TEXT     NOT NULL,
-    label         TEXT     NOT NULL CHECK (LENGTH(label) BETWEEN 1 AND 60),
-    last_used_at  DATETIME NULL,
-    revoked_at    DATETIME NULL,
-    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-`;
 
 function sqliteTime(date: Date): string {
   return date.toISOString().slice(0, 19).replace("T", " ");
@@ -131,19 +90,22 @@ describe("shouldRefreshLastUsed", () => {
 
 describe("requireAgentToken middleware", () => {
   let db: D1Database;
+  let agentId: number;
 
   beforeEach(async () => {
     const SQL = await Database();
-    const sqliteDb = new SQL.Database();
-    sqliteDb.run(SCHEMA);
-    db = new SQLiteTestDatabase(sqliteDb) as unknown as D1Database;
-    await createAgent(db, { owner_user_id: 7, symbol: "RANKBOT" });
+    db = createSqliteD1(new SQL.Database());
+    const result = await runMigrations(db, await loadMigrations(migrationsDir));
+    expect(result.success).toBe(true);
+    // The migrations seed agents, so capture the real id rather than assuming 1.
+    const agent = await createAgent(db, { owner_user_id: 7, symbol: "RANKBOT" });
+    agentId = agent.id;
   });
 
   async function seedToken() {
     const generated = await generateToken();
     const row = await insertToken(db, {
-      agent_id: 1,
+      agent_id: agentId,
       label: "bot",
       owner_user_id: 7,
       token_hash: generated.hash,
@@ -183,7 +145,7 @@ describe("requireAgentToken middleware", () => {
 
   it("rejects a revoked token (401)", async () => {
     const { raw, row } = await seedToken();
-    await revokeToken(db, row.id, 1);
+    await revokeToken(db, row.id, agentId);
     const response = await get(botApp(), `Bearer ${raw}`);
     expect(response.status).toBe(401);
   });
@@ -195,7 +157,7 @@ describe("requireAgentToken middleware", () => {
     // token row itself is not revoked.
     await db
       .prepare("UPDATE agents SET owner_user_id = ? WHERE id = ?")
-      .bind(8, 1)
+      .bind(8, agentId)
       .run();
     const response = await get(botApp(), `Bearer ${raw}`);
     expect(response.status).toBe(401);
@@ -203,7 +165,7 @@ describe("requireAgentToken middleware", () => {
 
   it("rejects a token after its agent is released to unowned (401)", async () => {
     const { raw } = await seedToken();
-    await db.prepare("UPDATE agents SET owner_user_id = NULL WHERE id = ?").bind(1).run();
+    await db.prepare("UPDATE agents SET owner_user_id = NULL WHERE id = ?").bind(agentId).run();
     const response = await get(botApp(), `Bearer ${raw}`);
     expect(response.status).toBe(401);
   });
@@ -246,5 +208,40 @@ describe("requireAgentToken middleware", () => {
       .bind(row.id)
       .first<{ t: string }>();
     expect(after?.t).not.toBe(stale);
+  });
+
+  it("still authenticates when the advisory last_used_at write fails (§6.3)", async () => {
+    const { raw, row } = await seedToken();
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+
+    const app = new Hono<{ Variables: BotVariables }>();
+    app.use("*", async (context, next) => {
+      context.env = { DB: dbWithFailingTouch(db) } as never;
+      await next();
+    });
+    app.use("*", requireAgentToken);
+    app.get("/whoami", (context) =>
+      context.json({ symbol: context.get("agent").symbol }),
+    );
+
+    // Auth must succeed even though touchLastUsed throws — the write is advisory.
+    const response = await app.request("/whoami", {
+      headers: { Authorization: `Bearer ${raw}` },
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ symbol: "RANKBOT" });
+    expect(warn).toHaveBeenCalledWith(
+      "touchLastUsed failed",
+      expect.objectContaining({ tokenId: row.id }),
+    );
+
+    // The failed advisory write left last_used_at untouched.
+    const after = await db
+      .prepare("SELECT last_used_at AS t FROM agent_tokens WHERE id = ?")
+      .bind(row.id)
+      .first<{ t: null | string }>();
+    expect(after?.t).toBeNull();
+
+    warn.mockRestore();
   });
 });

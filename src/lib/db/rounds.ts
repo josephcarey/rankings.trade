@@ -20,7 +20,7 @@
  * read-only — this module never mutates another epic's tables.
  */
 
-import { D1_MAX_BATCH } from "./snapshots";
+import { D1_MAX_BATCH } from "./constants";
 
 /** A round row as stored. `is_ranked`/booleans are SQLite integers (0|1). */
 export type Round = {

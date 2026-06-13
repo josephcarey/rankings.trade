@@ -252,6 +252,7 @@ describe("GET /universe/leaderboard — open-season scoping + pagination", () =>
     expect(body.items).toHaveLength(5);
     expect(body.items[0].rating).toBe(1540); // highest first
     expect(body.items[0].rank).toBe(1);
+    expect(body.items[0].agent_symbol).toBe("LEAD4"); // resolves id -> symbol (§2.1)
     // The closed season's 3000-rated GHOST is absent.
     expect(body.items.some((r: any) => r.rating === 3000)).toBe(false);
   });
@@ -437,6 +438,77 @@ describe("rate-limit headers", () => {
     expect(third.status).toBe(429);
     expect(third.headers.get("Retry-After")).not.toBeNull();
     expect(((await third.json()) as any).error.code).toBe("rate_limited");
+  });
+});
+
+describe("rate-limit — token randomisation cannot bypass the IP budget (§6.1)", () => {
+  it("buckets a fresh random bearer per request by IP, not by raw token", async () => {
+    const api = makeApi({
+      limiter: createPublicRateLimiter({ limit: 2, windowMs: 60_000 }),
+      now: () => new Date(1_000_000),
+    });
+
+    // Each request carries a DIFFERENT random bearer that never validates. Keying by the raw
+    // token would give each its own bucket (always allowed); keying by IP shares one bucket.
+    const first = await api.request("/seasons/current", {
+      headers: { Authorization: "Bearer rtbot_random_1" },
+    });
+    const second = await api.request("/seasons/current", {
+      headers: { Authorization: "Bearer rtbot_random_2" },
+    });
+    const third = await api.request("/seasons/current", {
+      headers: { Authorization: "Bearer rtbot_random_3" },
+    });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(third.status).toBe(429);
+  });
+
+  it("keys a VALID token by its token id, separate from the IP bucket", async () => {
+    const agent = await createAgent(db, { symbol: "RLBOT", owner_user_id: 7 });
+    const token = await tokenFor(agent.id, 7);
+    const api = makeApi({
+      limiter: createPublicRateLimiter({ limit: 2, windowMs: 60_000 }),
+      now: () => new Date(1_000_000),
+    });
+
+    // Spend the anonymous ip:unknown budget.
+    await api.request("/seasons/current");
+    await api.request("/seasons/current");
+    const blocked = await api.request("/seasons/current");
+    expect(blocked.status).toBe(429);
+
+    // A validated token has its own bucket and is still allowed.
+    const withToken = await api.request("/seasons/current", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(withToken.status).toBe(200);
+  });
+
+  it("treats a stale (owner-mismatched) token as anonymous, sharing the IP bucket", async () => {
+    const agent = await createAgent(db, { symbol: "STALEBOT", owner_user_id: 7 });
+    const token = await tokenFor(agent.id, 7);
+    // Ownership moved on after the token snapshotted owner 7: the token is no longer a valid
+    // identity, so it must not earn its own rate-limit bucket.
+    await db
+      .prepare("UPDATE agents SET owner_user_id = ? WHERE id = ?")
+      .bind(99, agent.id)
+      .run();
+
+    const api = makeApi({
+      limiter: createPublicRateLimiter({ limit: 2, windowMs: 60_000 }),
+      now: () => new Date(1_000_000),
+    });
+
+    const auth = { headers: { Authorization: `Bearer ${token}` } };
+    const first = await api.request("/seasons/current", auth);
+    const second = await api.request("/seasons/current", auth);
+    // Third stale-token request shares the ip:unknown bucket and is throttled.
+    const third = await api.request("/seasons/current", auth);
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(third.status).toBe(429);
   });
 });
 

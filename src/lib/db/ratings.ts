@@ -20,7 +20,7 @@
  * epic's tables.
  */
 
-import { D1_MAX_BATCH } from "./snapshots";
+import { D1_MAX_BATCH } from "./constants";
 
 /** A stored rating row for one agent in one season. */
 export type RatingRow = {
