@@ -103,6 +103,26 @@ export async function getAgentById(
 }
 
 /**
+ * Map a set of agent ids to their callsign symbols in one query (read-only).
+ *
+ * Used by leaderboard/profile read views to label rows without an N+1 of
+ * {@link getAgentById}. Unknown ids are simply absent from the returned map; an
+ * empty input issues no query.
+ */
+export async function getSymbolsByIds(
+  db: D1Database,
+  ids: readonly number[],
+): Promise<Map<number, string>> {
+  if (ids.length === 0) return new Map();
+  const placeholders = ids.map(() => "?").join(", ");
+  const { results } = await db
+    .prepare(`SELECT id, symbol FROM agents WHERE id IN (${placeholders})`)
+    .bind(...ids)
+    .all<{ id: number; symbol: string }>();
+  return new Map((results ?? []).map((row) => [row.id, row.symbol]));
+}
+
+/**
  * List the agents owned by a given user, newest first.
  */
 export async function listAgentsByOwner(

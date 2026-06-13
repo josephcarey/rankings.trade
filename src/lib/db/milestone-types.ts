@@ -92,6 +92,73 @@ export async function isGlobalMilestoneType(
 }
 
 /**
+ * Recognized milestone-type keys (with optional labels) for a LEAGUE view:
+ * every global default plus that league's custom types. Returned as a map of
+ * `key → label` (label may be null) so a feed can both test recognition
+ * (`map.has(type)`) and prefer a curated label in O(1) per row.
+ *
+ * League custom types are recognized here because a league view only renders
+ * its own active members' milestones, so the "agent is an active member"
+ * condition of {@link isRecognizedType} already holds for every row.
+ */
+export async function recognizedTypesForLeague(
+  db: D1Database,
+  leagueId: number,
+): Promise<Map<string, null | string>> {
+  const { results } = await db
+    .prepare(
+      `SELECT key, label FROM milestone_types
+       WHERE league_id IS NULL OR league_id = ?`,
+    )
+    .bind(leagueId)
+    .all<{ key: string; label: null | string }>();
+  return new Map((results ?? []).map((row) => [row.key, row.label]));
+}
+
+/**
+ * Recognized milestone-type keys (with optional labels) for an AGENT PROFILE
+ * view: every global default plus the custom types of the leagues the agent is
+ * an ACTIVE member of — restricted to `visibleLeagueIds`, the leagues the
+ * viewer is permitted to see.
+ *
+ * The restriction is a visibility safeguard: a public profile must not reveal
+ * that a private league exists (or its curated custom-type labels) to a viewer
+ * who could not otherwise see that league. Pass the agent's visible active
+ * leagues; an empty list yields global defaults only.
+ */
+export async function recognizedTypesForAgent(
+  db: D1Database,
+  agentId: number,
+  visibleLeagueIds: readonly number[],
+): Promise<Map<string, null | string>> {
+  const recognized = new Map<string, null | string>();
+
+  const globals = await db
+    .prepare("SELECT key, label FROM milestone_types WHERE league_id IS NULL")
+    .all<{ key: string; label: null | string }>();
+  for (const row of globals.results ?? []) recognized.set(row.key, row.label);
+
+  if (visibleLeagueIds.length === 0) return recognized;
+
+  const placeholders = visibleLeagueIds.map(() => "?").join(", ");
+  const custom = await db
+    .prepare(
+      `SELECT mt.key AS key, mt.label AS label
+       FROM milestone_types mt
+       JOIN league_members lm
+         ON lm.league_id = mt.league_id
+        AND lm.agent_id = ?
+        AND lm.left_at IS NULL
+       WHERE mt.league_id IN (${placeholders})`,
+    )
+    .bind(agentId, ...visibleLeagueIds)
+    .all<{ key: string; label: null | string }>();
+  for (const row of custom.results ?? []) recognized.set(row.key, row.label);
+
+  return recognized;
+}
+
+/**
  * Whether a milestone `type` is RECOGNIZED in a given context.
  *
  * - With no `leagueId`: recognized iff it is a global default.

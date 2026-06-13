@@ -72,6 +72,30 @@ export async function listMilestonesByAgent(
 }
 
 /**
+ * List recent non-deleted milestones across a set of agents, newest first
+ * (read-only). Backs a league activity feed without an N+1 per member. An empty
+ * agent set issues no query.
+ */
+export async function listMilestonesByAgents(
+  db: D1Database,
+  agentIds: readonly number[],
+  limit: number,
+): Promise<MilestoneRecord[]> {
+  if (agentIds.length === 0) return [];
+  const placeholders = agentIds.map(() => "?").join(", ");
+  const { results } = await db
+    .prepare(
+      `SELECT * FROM milestones
+       WHERE agent_id IN (${placeholders}) AND deleted_at IS NULL
+       ORDER BY ts DESC, id DESC
+       LIMIT ?`,
+    )
+    .bind(...agentIds, limit)
+    .all<MilestoneRecord>();
+  return results ?? [];
+}
+
+/**
  * Soft-delete a milestone: stamp `deleted_at`, the moderator, and an optional
  * reason. Idempotent — an already-deleted row keeps its original metadata.
  *
