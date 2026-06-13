@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentSnapshotRow } from "./snapshots-types";
 
-import { D1_MAX_BATCH, writeSnapshots } from "./snapshots";
+import { D1_MAX_BATCH } from "./constants";
+import { writeSnapshots } from "./snapshots";
 import { createSqliteD1 } from "./sqlite-d1-adapter";
 
 const SNAPSHOTS_SCHEMA = `

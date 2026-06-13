@@ -38,8 +38,9 @@ import type {
 } from "./legacy-types";
 
 import { isValidSymbol } from "../db/agents";
+import { D1_MAX_BATCH } from "../db/constants";
 import { listSeasonStandings } from "../db/seasons";
-import { D1_MAX_BATCH, writeSnapshots } from "../db/snapshots";
+import { writeSnapshots } from "../db/snapshots";
 import { glickoRatingTrigger } from "../ratings/trigger";
 import { finalizePendingRounds } from "../rounds/finalize";
 import { defaultFinalizationSeams } from "../rounds/seams";

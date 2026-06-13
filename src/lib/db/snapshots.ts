@@ -10,8 +10,7 @@
 
 import type { AgentSnapshotRow } from "./snapshots-types";
 
-/** D1 rejects batches larger than 100 statements. */
-export const D1_MAX_BATCH = 100;
+import { D1_MAX_BATCH } from "./constants";
 
 const UPSERT_SQL = `INSERT INTO snapshots
     (reset_date, observed_at, agent_symbol, credits, credit_rank, total_agents, ship_count, faction)
