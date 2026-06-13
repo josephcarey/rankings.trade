@@ -53,3 +53,28 @@ export async function writeSnapshots(
     await db.batch(statements.slice(index, index + D1_MAX_BATCH));
   }
 }
+
+/**
+ * An agent's most recent observed snapshot — its live Universe credit position
+ * (Epic M read API). Ordered by the round key then the capture time so the pick
+ * is deterministic across same-round re-observations.
+ *
+ * @returns The latest snapshot row for `agentSymbol`, or null if never observed.
+ */
+export async function getLatestSnapshot(
+  db: D1Database,
+  agentSymbol: string,
+): Promise<AgentSnapshotRow | null> {
+  const row = await db
+    .prepare(
+      `SELECT reset_date, observed_at, agent_symbol, credits, credit_rank,
+              total_agents, ship_count, faction
+       FROM snapshots
+       WHERE agent_symbol = ?
+       ORDER BY reset_date DESC, observed_at DESC
+       LIMIT 1`,
+    )
+    .bind(agentSymbol)
+    .first<AgentSnapshotRow>();
+  return row ?? null;
+}
