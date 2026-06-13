@@ -20,7 +20,19 @@
 
 import type { League, LeagueUpdate, Visibility } from "../db/leagues";
 
-import { userOwnsActiveMember } from "../db/league-members";
+import {
+  createAgent,
+  getAgentBySymbol,
+  isValidSymbol,
+  normalizeSymbol,
+} from "../db/agents";
+import {
+  addMember,
+  leaveMember,
+  listActiveParticipants,
+  type ParticipantRow,
+  userOwnsActiveMember,
+} from "../db/league-members";
 import {
   createLeague as createLeagueRow,
   getLeagueById,
@@ -39,7 +51,7 @@ export type Actor = {
 /** Discriminated result for league-management operations. */
 export type LeagueServiceResult<T> =
   | { ok: true; value: T }
-  | { ok: false; reason: "invalid_name" | "not_found" };
+  | { ok: false; reason: "invalid_name" | "invalid_symbol" | "not_found" };
 
 /** Fields accepted by {@link createLeagueForActor}. */
 export type CreateLeagueFields = {
@@ -136,4 +148,83 @@ export async function updateLeagueDetails(
   const updated = await updateLeagueRow(db, leagueId, fields);
   if (!updated) return { ok: false, reason: "not_found" };
   return { ok: true, value: updated };
+}
+
+/**
+ * Add an agent (by callsign) to a league as an active participant. Requires the
+ * actor to own the league or be an admin. The agent may be claimed or unclaimed;
+ * an unknown callsign auto-creates an unclaimed agent row. Idempotent if the
+ * agent is already an active participant.
+ *
+ * @returns The active participant row, or a failure reason.
+ */
+export async function addParticipant(
+  db: D1Database,
+  actor: Actor,
+  leagueId: number,
+  rawSymbol: string,
+): Promise<LeagueServiceResult<ParticipantRow>> {
+  const manageable = await requireManageableLeague(db, actor, leagueId);
+  if (!manageable.ok) return { ok: false, reason: "not_found" };
+
+  const symbol = normalizeSymbol(rawSymbol);
+  if (!isValidSymbol(symbol)) return { ok: false, reason: "invalid_symbol" };
+
+  const agent =
+    (await getAgentBySymbol(db, symbol)) ?? (await createAgent(db, { symbol }));
+
+  const member = await addMember(db, {
+    league_id: leagueId,
+    agent_id: agent.id,
+    added_by_user_id: actor.userId,
+  });
+
+  return {
+    ok: true,
+    value: {
+      agent_id: agent.id,
+      symbol: agent.symbol,
+      display_name: agent.display_name,
+      owner_user_id: agent.owner_user_id,
+      joined_at: member.joined_at,
+    },
+  };
+}
+
+/**
+ * Remove an agent (by callsign) from a league: sets `left_at` on its active
+ * membership. Requires the actor to own the league or be an admin. Returns
+ * `not_found` when the callsign is unknown or not an active participant.
+ */
+export async function removeParticipant(
+  db: D1Database,
+  actor: Actor,
+  leagueId: number,
+  rawSymbol: string,
+): Promise<LeagueServiceResult<{ agent_id: number; symbol: string }>> {
+  const manageable = await requireManageableLeague(db, actor, leagueId);
+  if (!manageable.ok) return { ok: false, reason: "not_found" };
+
+  const symbol = normalizeSymbol(rawSymbol);
+  const agent = await getAgentBySymbol(db, symbol);
+  if (!agent) return { ok: false, reason: "not_found" };
+
+  const left = await leaveMember(db, leagueId, agent.id);
+  if (!left) return { ok: false, reason: "not_found" };
+
+  return { ok: true, value: { agent_id: agent.id, symbol: agent.symbol } };
+}
+
+/**
+ * List a league's active participants, subject to the same visibility rules as
+ * {@link getViewableLeague} (so private rosters are not leaked).
+ */
+export async function listParticipants(
+  db: D1Database,
+  actor: Actor | null,
+  leagueId: number,
+): Promise<LeagueServiceResult<ParticipantRow[]>> {
+  const viewable = await getViewableLeague(db, actor, leagueId);
+  if (!viewable.ok) return viewable;
+  return { ok: true, value: await listActiveParticipants(db, leagueId) };
 }

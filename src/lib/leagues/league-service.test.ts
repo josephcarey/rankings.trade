@@ -4,14 +4,18 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import type { Actor } from "./league-service";
 
+import { getAgentBySymbol } from "../db/agents";
 import { addMember, leaveMember } from "../db/league-members";
 import { getLeagueById } from "../db/leagues";
 import { loadMigrations } from "../db/loader";
 import { runMigrations } from "../db/migrate";
 import { createSqliteD1 } from "../db/sqlite-d1-adapter";
 import {
+  addParticipant,
   createLeagueForActor,
   getViewableLeague,
+  listParticipants,
+  removeParticipant,
   updateLeagueDetails,
 } from "./league-service";
 
@@ -195,5 +199,156 @@ describe("updateLeagueDetails", () => {
       ok: false,
       reason: "not_found",
     });
+  });
+});
+
+describe("addParticipant", () => {
+  let db: D1Database;
+  beforeEach(async () => {
+    db = await makeDb();
+  });
+
+  it("adds an unknown callsign as a new unclaimed participant", async () => {
+    const id = await newLeague(db);
+    const result = await addParticipant(db, OWNER, id, "newbot");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.symbol).toBe("NEWBOT");
+    expect(result.value.owner_user_id).toBeNull();
+
+    // The agent row was auto-created.
+    const agent = await getAgentBySymbol(db, "NEWBOT");
+    expect(agent).not.toBeNull();
+  });
+
+  it("adds an existing claimed agent without changing its owner", async () => {
+    const id = await newLeague(db);
+    await insertAgent(db, "OWNED", 5);
+    const result = await addParticipant(db, OWNER, id, "owned");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.owner_user_id).toBe(5);
+  });
+
+  it("lets an admin add to a league they do not own", async () => {
+    const id = await newLeague(db);
+    const result = await addParticipant(db, ADMIN, id, "adminbot");
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects an invalid callsign", async () => {
+    const id = await newLeague(db);
+    expect(await addParticipant(db, OWNER, id, "x")).toEqual({
+      ok: false,
+      reason: "invalid_symbol",
+    });
+  });
+
+  it("hides the league from a non-owner non-admin and adds nothing", async () => {
+    const id = await newLeague(db);
+    expect(await addParticipant(db, STRANGER, id, "sneaky")).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+    expect(await getAgentBySymbol(db, "SNEAKY")).toBeNull();
+  });
+
+  it("is idempotent for an already-active participant", async () => {
+    const id = await newLeague(db);
+    await addParticipant(db, OWNER, id, "dupe");
+    await addParticipant(db, OWNER, id, "dupe");
+    const list = await listParticipants(db, OWNER, id);
+    expect(list.ok).toBe(true);
+    if (!list.ok) return;
+    expect(list.value).toHaveLength(1);
+  });
+});
+
+describe("removeParticipant", () => {
+  let db: D1Database;
+  beforeEach(async () => {
+    db = await makeDb();
+  });
+
+  it("removes an active participant", async () => {
+    const id = await newLeague(db);
+    await addParticipant(db, OWNER, id, "leaver");
+    const result = await removeParticipant(db, OWNER, id, "leaver");
+    expect(result.ok).toBe(true);
+
+    const list = await listParticipants(db, OWNER, id);
+    if (!list.ok) return;
+    expect(list.value).toHaveLength(0);
+  });
+
+  it("returns not_found for an unknown callsign", async () => {
+    const id = await newLeague(db);
+    expect(await removeParticipant(db, OWNER, id, "ghost")).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+  });
+
+  it("returns not_found for an agent that is not a participant", async () => {
+    const id = await newLeague(db);
+    await insertAgent(db, "OUTSIDER", null);
+    expect(await removeParticipant(db, OWNER, id, "outsider")).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+  });
+
+  it("hides the league from a non-owner non-admin and removes nothing", async () => {
+    const id = await newLeague(db);
+    await addParticipant(db, OWNER, id, "keepme");
+    expect(await removeParticipant(db, STRANGER, id, "keepme")).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+    const list = await listParticipants(db, OWNER, id);
+    if (!list.ok) return;
+    expect(list.value).toHaveLength(1);
+  });
+
+  it("lets an admin remove from a league they do not own", async () => {
+    const id = await newLeague(db);
+    await addParticipant(db, OWNER, id, "adminrm");
+    const result = await removeParticipant(db, ADMIN, id, "adminrm");
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("listParticipants", () => {
+  let db: D1Database;
+  beforeEach(async () => {
+    db = await makeDb();
+  });
+
+  it("lists the active roster for the owner", async () => {
+    const id = await newLeague(db);
+    await addParticipant(db, OWNER, id, "one");
+    await addParticipant(db, OWNER, id, "two");
+    const result = await listParticipants(db, OWNER, id);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.map((p) => p.symbol)).toEqual(["ONE", "TWO"]);
+  });
+
+  it("hides a private roster from an unrelated user", async () => {
+    const id = await newLeague(db, "private");
+    await addParticipant(db, OWNER, id, "secret");
+    expect(await listParticipants(db, STRANGER, id)).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+  });
+
+  it("shows a public roster to an anonymous caller", async () => {
+    const id = await newLeague(db, "public");
+    await addParticipant(db, OWNER, id, "pub");
+    const result = await listParticipants(db, null, id);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value).toHaveLength(1);
   });
 });

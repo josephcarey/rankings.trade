@@ -125,6 +125,37 @@ export async function listActiveMembers(
   return results ?? [];
 }
 
+/** An active member agent with its agent fields, for roster display. */
+export type ParticipantRow = {
+  agent_id: number;
+  symbol: string;
+  display_name: string | null;
+  owner_user_id: number | null;
+  joined_at: string;
+};
+
+/**
+ * List a league's active participants joined with their agent details, oldest
+ * membership first.
+ */
+export async function listActiveParticipants(
+  db: D1Database,
+  leagueId: number,
+): Promise<ParticipantRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT a.id AS agent_id, a.symbol AS symbol, a.display_name AS display_name,
+              a.owner_user_id AS owner_user_id, m.joined_at AS joined_at
+       FROM league_members m
+       JOIN agents a ON a.id = m.agent_id
+       WHERE m.league_id = ? AND m.left_at IS NULL
+       ORDER BY m.joined_at ASC, m.id ASC`,
+    )
+    .bind(leagueId)
+    .all<ParticipantRow>();
+  return results ?? [];
+}
+
 /**
  * Whether a user owns at least one agent that is an active member of a league.
  *
