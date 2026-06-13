@@ -14,7 +14,7 @@
 
 import type { Season } from "../db/seasons";
 
-import { getAgentBySymbol, getSymbolsByIds } from "../db/agents";
+import { getAgentBySymbol } from "../db/agents";
 import {
   getActiveMembership,
   userOwnsActiveMember,
@@ -23,8 +23,11 @@ import { getLeagueById } from "../db/leagues";
 import { getLatestFinalizedLeagueRound, listStandings } from "../db/rounds";
 import { getOpenSeason, listAgentSeasonHistory } from "../db/seasons";
 import { getLatestSnapshot } from "../db/snapshots";
-import { computeSeasonStandings } from "../seasons/standings";
-import { paginate, type Pagination } from "./pagination";
+import {
+  readOpenSeasonLeaderboardPage,
+  readOpenSeasonStandingForAgent,
+} from "../seasons/read-standings";
+import { type Pagination } from "./pagination";
 
 /** A compact public view of a season's lifecycle state. */
 export type SeasonView = {
@@ -164,8 +167,7 @@ export async function getAgentView(
 
   if (openSeason) {
     season = toSeasonView(openSeason);
-    const standings = await computeSeasonStandings(db, openSeason.id);
-    const row = standings.find((s) => s.agent_id === agent.id);
+    const row = await readOpenSeasonStandingForAgent(db, openSeason.id, agent.id);
     if (row) {
       current = {
         season_id: openSeason.id,
@@ -281,9 +283,10 @@ export async function getLeagueStandingsView(
 }
 
 /**
- * Build a paginated Universe leaderboard for the OPEN season (DEC-I2 scoped). The full ranked
- * set is computed once, `total` is taken before slicing, then the requested page is returned.
- * With no open season the page is empty and `season` is null.
+ * Build a paginated Universe leaderboard for the OPEN season (DEC-I2 scoped). Reads the
+ * materialized `open_season_standings` cache with `LIMIT`/`OFFSET`/`COUNT` pushed into SQL
+ * (audit §8.1) — falling back to a fresh compute only while the cache is cold. With no open
+ * season the page is empty and `season` is null.
  */
 export async function getUniverseLeaderboard(
   db: D1Database,
@@ -300,29 +303,28 @@ export async function getUniverseLeaderboard(
     };
   }
 
-  const standings = await computeSeasonStandings(db, openSeason.id);
-  const symbols = await getSymbolsByIds(
+  const { rows, total } = await readOpenSeasonLeaderboardPage(
     db,
-    standings.map((s) => s.agent_id),
+    openSeason.id,
+    pagination,
   );
-  const rows: LeaderboardRow[] = standings.map((s) => ({
-    rank: s.final_rank,
-    agent_symbol: symbols.get(s.agent_id) ?? "?",
-    agent_id: s.agent_id,
-    rating: s.final_rating,
-    rd: s.final_rd,
-    title: s.title,
-    established: s.established,
-    ranked_rounds: s.ranked_rounds,
+  const items: LeaderboardRow[] = rows.map((r) => ({
+    rank: r.final_rank,
+    agent_symbol: r.agent_symbol,
+    agent_id: r.agent_id,
+    rating: r.final_rating,
+    rd: r.final_rd,
+    title: r.title,
+    established: r.established,
+    ranked_rounds: r.ranked_rounds,
   }));
 
-  const page = paginate(rows, pagination);
   return {
     season: toSeasonView(openSeason),
-    items: page.items,
-    total: page.total,
-    limit: page.limit,
-    offset: page.offset,
+    items,
+    total,
+    limit: pagination.limit,
+    offset: pagination.offset,
   };
 }
 

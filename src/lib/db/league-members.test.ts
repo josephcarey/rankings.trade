@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   addMember,
   getActiveMembership,
+  leaguesWithActiveMemberOwnedBy,
   leaveMember,
   listActiveMembers,
   userOwnsActiveMember,
@@ -145,5 +146,50 @@ describe("userOwnsActiveMember", () => {
     const agentId = await insertAgent(db, "UNOWNED", null);
     await addMember(db, { league_id: leagueId, agent_id: agentId });
     expect(await userOwnsActiveMember(db, leagueId, 1)).toBe(false);
+  });
+});
+
+async function makeLeague(db: D1Database, name: string): Promise<number> {
+  const league = await createLeague(db, { name, owner_user_id: 1 });
+  return league.id;
+}
+
+describe("leaguesWithActiveMemberOwnedBy (batched §8.2)", () => {
+  let db: D1Database;
+
+  beforeEach(async () => {
+    db = await makeDb();
+  });
+
+  it("returns the subset of leagues where the user owns an active member, in one query", async () => {
+    const l1 = await makeLeague(db, "L1");
+    const l2 = await makeLeague(db, "L2");
+    const l3 = await makeLeague(db, "L3");
+
+    const mine = await insertAgent(db, "MINE", 42);
+    const other = await insertAgent(db, "OTHER", 7);
+    const left = await insertAgent(db, "LEFT", 42);
+    await addMember(db, { league_id: l1, agent_id: mine });
+    await addMember(db, { league_id: l2, agent_id: other });
+    await addMember(db, { league_id: l3, agent_id: left });
+    await leaveMember(db, l3, left); // user 42 left l3 ⇒ excluded
+
+    const result = await leaguesWithActiveMemberOwnedBy(db, [l1, l2, l3], 42);
+    expect([...result].toSorted((a, b) => a - b)).toEqual([l1]);
+  });
+
+  it("matches userOwnsActiveMember for each league individually", async () => {
+    const l1 = await makeLeague(db, "L1");
+    const l2 = await makeLeague(db, "L2");
+    const a = await insertAgent(db, "AAA", 42);
+    await addMember(db, { league_id: l1, agent_id: a });
+
+    const batched = await leaguesWithActiveMemberOwnedBy(db, [l1, l2], 42);
+    expect(batched.has(l1)).toBe(await userOwnsActiveMember(db, l1, 42));
+    expect(batched.has(l2)).toBe(await userOwnsActiveMember(db, l2, 42));
+  });
+
+  it("returns an empty set for empty input", async () => {
+    expect(await leaguesWithActiveMemberOwnedBy(db, [], 42)).toEqual(new Set());
   });
 });

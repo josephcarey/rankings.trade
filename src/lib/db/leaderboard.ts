@@ -1,15 +1,16 @@
 /**
  * Universe leaderboard composition (Epic J) — read-only.
  *
- * Joins the OPEN-season standings (`computeSeasonStandings`, which derives rank +
- * title from the live `(agent_id, season_id)` ratings — DEC-I2) with agent
- * callsigns into render-ready rows. Callers MUST resolve the open season via
- * `getOpenSeason` first; this module never reads closed-season ratings.
+ * Joins the OPEN-season standings (the materialized `open_season_standings` cache,
+ * which mirrors `computeSeasonStandings` — rank + title derived from the live
+ * `(agent_id, season_id)` ratings, DEC-I2) with agent callsigns into render-ready
+ * rows. Callers MUST resolve the open season via `getOpenSeason` first; this module
+ * never reads closed-season ratings.
  */
 
 import type { SeasonStandingInsert } from "./seasons";
 
-import { computeSeasonStandings } from "../seasons/standings";
+import { readOpenSeasonStandings } from "../seasons/read-standings";
 import { getSymbolsByIds } from "./agents";
 
 /** One render-ready leaderboard / current-standing row. */
@@ -44,12 +45,14 @@ export function toLeaderboardRow(
 /**
  * The full open-season Universe leaderboard, ranked by rating (competition
  * ranking; ties share a rank). Empty when the season has no rated agents yet.
+ * Reads the materialized `open_season_standings` cache (audit §8.1), falling back
+ * to a fresh compute only while the cache is cold.
  */
 export async function buildLeaderboard(
   db: D1Database,
   seasonId: number,
 ): Promise<LeaderboardRow[]> {
-  const standings = await computeSeasonStandings(db, seasonId);
+  const standings = await readOpenSeasonStandings(db, seasonId);
   if (standings.length === 0) return [];
 
   const symbols = await getSymbolsByIds(
