@@ -17,12 +17,23 @@ import type { FinalizationSeams } from "../rounds/seams";
 import type { ScrapeSummary } from "./run";
 
 import { createLogger as makeLogger } from "../../logger";
+import { glickoRatingTrigger } from "../ratings/trigger";
 import { finalizePendingRounds } from "../rounds/finalize";
 import { defaultFinalizationSeams } from "../rounds/seams";
 import { runScrape } from "./run";
 import { createSpaceTradersClient } from "./spacetraders-client";
 
 type Logger = ReturnType<typeof createLogger>;
+
+/**
+ * Production finalization seams: Epic G's inert defaults with Epic H's real Glicko-2
+ * rating trigger composed in. Epic I will likewise replace the season resolver/close
+ * seams when it lands.
+ */
+const productionFinalizationSeams: FinalizationSeams = {
+  ...defaultFinalizationSeams,
+  ratingTrigger: glickoRatingTrigger,
+};
 
 /** The subset of Cloudflare's `ScheduledEvent` the scrape needs. */
 export interface ScheduledScrapeEvent {
@@ -36,7 +47,7 @@ export interface ScheduledScrapeOverrides {
   /** Finalization sweep; defaults to {@link finalizePendingRounds}. */
   finalize?: typeof finalizePendingRounds;
   logger?: Logger;
-  /** Finalization seams; defaults to the inert {@link defaultFinalizationSeams}. */
+  /** Finalization seams; defaults to {@link productionFinalizationSeams}. */
   seams?: FinalizationSeams;
 }
 
@@ -63,7 +74,7 @@ export async function scheduledScrape(
   const client =
     overrides.client ?? createSpaceTradersClient({ fetch: globalThis.fetch });
   const finalize = overrides.finalize ?? finalizePendingRounds;
-  const seams = overrides.seams ?? defaultFinalizationSeams;
+  const seams = overrides.seams ?? productionFinalizationSeams;
 
   let summary: ScrapeSummary;
   try {
