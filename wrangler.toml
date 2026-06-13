@@ -3,6 +3,13 @@ main = "./.svelte-kit/cloudflare/_worker.js"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 
+[vars]
+# Clerk publishable key (client-safe, shipped to the browser anyway). svelte-clerk's
+# server handler reads this from $env/dynamic/public at runtime, so it must exist as a
+# Worker runtime var — not only as a build-time var — or SSR 500s with "Publishable key
+# is missing". Safe to commit: publishable keys are public by design.
+PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_c3VwZXJiLWJvYS01Ni5jbGVyay5hY2NvdW50cy5kZXYk"
+
 [assets]
 directory = ".svelte-kit/cloudflare"
 binding = "ASSETS"
