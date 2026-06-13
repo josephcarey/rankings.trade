@@ -12,11 +12,10 @@
  */
 
 /** Inclusive character bounds for a freeform log line. */
-export const LOG_TEXT_MIN = 1;
+const LOG_TEXT_MIN = 1;
 export const LOG_TEXT_MAX = 2000;
 
-/** Inclusive character bounds for a milestone type key. */
-export const MILESTONE_TYPE_MIN = 1;
+/** Inclusive upper bound for a milestone type key. */
 export const MILESTONE_TYPE_MAX = 80;
 
 /** Max serialized byte length of a milestone `metadata` object. */
@@ -29,7 +28,7 @@ export const METADATA_MAX_DEPTH = 5;
  * Canonical milestone-type key: lowercase slug, starts alphanumeric, then
  * alphanumerics or hyphens, 1–80 chars. e.g. `first-jump`, `credits-10m`.
  */
-export const MILESTONE_TYPE_PATTERN = /^[a-z0-9][a-z0-9-]{0,79}$/;
+const MILESTONE_TYPE_PATTERN = /^[a-z0-9][a-z0-9-]{0,79}$/;
 
 /** Trim and lowercase a raw milestone type into its canonical key form. */
 export function normalizeMilestoneType(raw: string): string {
@@ -102,7 +101,7 @@ function jsonDepth(value: unknown): number {
  * serialized byte length and nesting depth, then returns the canonical
  * `JSON.stringify` form for storage.
  */
-export function validateMetadata(raw: unknown): MetadataResult {
+export function validateMetadata(raw?: unknown): MetadataResult {
   if (raw === undefined || raw === null) return { ok: true, value: null };
   if (typeof raw !== "object" || Array.isArray(raw)) {
     return { ok: false, reason: "invalid_metadata" };

@@ -13,11 +13,11 @@
  * single league owner must not be able to censor it everywhere.
  */
 
-import type { Actor } from "../leagues/league-service";
 import type { LogRecord } from "../db/logs";
 import type { MilestoneRecord } from "../db/milestones";
+import type { Actor } from "../leagues/league-service";
 
-import { getAgentBySymbol, getAgentById } from "../db/agents";
+import { getAgentById, getAgentBySymbol } from "../db/agents";
 import { getLogById, listLogsByAgent, softDeleteLog } from "../db/logs";
 import {
   getMilestoneById,

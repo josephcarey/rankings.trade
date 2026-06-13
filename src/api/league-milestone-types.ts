@@ -6,12 +6,12 @@ import type { Actor } from "../lib/leagues/league-service";
 import type { CloudflareBindings } from "../platform";
 import type { AuthedVariables } from "./auth";
 
+import { createErrorResponse } from "../errors";
 import { isAdmin } from "../lib/auth/admin";
 import {
   listLeagueMilestoneTypesForActor,
   registerLeagueMilestoneType,
 } from "../lib/ingestion/milestone-type-service";
-import { createErrorResponse } from "../errors";
 import { attachLocalUser, clerkAuth, getAuth, requireAuth } from "./auth";
 
 type LeagueTypesEnv = {
@@ -68,6 +68,12 @@ export const registerTypeHandler: Handler<LeagueTypesEnv> = async (context) => {
   );
   if (!result.ok) {
     switch (result.reason) {
+      case "duplicate": {
+        return context.json(
+          createErrorResponse("duplicate", "That milestone type already exists."),
+          409,
+        );
+      }
       case "invalid_type": {
         return context.json(
           createErrorResponse(
@@ -75,12 +81,6 @@ export const registerTypeHandler: Handler<LeagueTypesEnv> = async (context) => {
             "Milestone type must be a slug of 1–80 lowercase characters.",
           ),
           400,
-        );
-      }
-      case "duplicate": {
-        return context.json(
-          createErrorResponse("duplicate", "That milestone type already exists."),
-          409,
         );
       }
       default: {

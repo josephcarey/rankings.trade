@@ -3,8 +3,8 @@ import Database from "sql.js";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { createAgent } from "../db/agents";
-import { listLogsByAgent } from "../db/logs";
 import { loadMigrations } from "../db/loader";
+import { listLogsByAgent } from "../db/logs";
 import { runMigrations } from "../db/migrate";
 import { listMilestonesByAgent } from "../db/milestones";
 import { createSqliteD1 } from "../db/sqlite-d1-adapter";
@@ -48,16 +48,18 @@ describe("submitLog", () => {
     const result = await submitLog(db, agentId, "  jumped to X1-AB  ");
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.value.text).toBe("jumped to X1-AB");
-    expect((await listLogsByAgent(db, agentId)).length).toBe(1);
+    const logs = await listLogsByAgent(db, agentId);
+    expect(logs.length).toBe(1);
   });
 
   it("rejects empty/oversized text without writing", async () => {
-    expect(await submitLog(db, agentId, "   ")).toEqual({ ok: false, reason: "invalid_text" });
+    expect(await submitLog(db, agentId, ' '.repeat(3))).toEqual({ ok: false, reason: "invalid_text" });
     expect(await submitLog(db, agentId, "a".repeat(2001))).toEqual({
       ok: false,
       reason: "invalid_text",
     });
-    expect((await listLogsByAgent(db, agentId)).length).toBe(0);
+    const logs = await listLogsByAgent(db, agentId);
+    expect(logs.length).toBe(0);
   });
 });
 
@@ -85,7 +87,8 @@ describe("submitMilestone", () => {
       expect(result.value.type).toBe("warp-core-online");
       expect(result.value.metadata).toBe('{"sector":"X1-AB"}');
     }
-    expect((await listMilestonesByAgent(db, agentId)).length).toBe(1);
+    const milestones = await listMilestonesByAgent(db, agentId);
+    expect(milestones.length).toBe(1);
   });
 
   it("rejects a malformed type without writing", async () => {
@@ -97,7 +100,8 @@ describe("submitMilestone", () => {
       ok: false,
       reason: "invalid_type",
     });
-    expect((await listMilestonesByAgent(db, agentId)).length).toBe(0);
+    const milestones = await listMilestonesByAgent(db, agentId);
+    expect(milestones.length).toBe(0);
   });
 
   it("rejects non-object or oversized metadata", async () => {
@@ -138,9 +142,12 @@ describe("enforceRateLimit", () => {
 
   it("resets in a new window", async () => {
     const config = { windowMs: 60_000, limit: 1 };
-    expect((await enforceRateLimit(db, tokenId, 0, config)).allowed).toBe(true);
-    expect((await enforceRateLimit(db, tokenId, 0, config)).allowed).toBe(false);
+    const first = await enforceRateLimit(db, tokenId, 0, config);
+    expect(first.allowed).toBe(true);
+    const second = await enforceRateLimit(db, tokenId, 0, config);
+    expect(second.allowed).toBe(false);
     // Next window.
-    expect((await enforceRateLimit(db, tokenId, 60_000, config)).allowed).toBe(true);
+    const third = await enforceRateLimit(db, tokenId, 60_000, config);
+    expect(third.allowed).toBe(true);
   });
 });

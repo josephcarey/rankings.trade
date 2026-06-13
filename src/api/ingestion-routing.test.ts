@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { fileURLToPath } from "node:url";
 import { Hono } from "hono";
+import { fileURLToPath } from "node:url";
 import Database from "sql.js";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -89,8 +89,10 @@ describe("/agents mount order", () => {
     });
     api.route("/agents", createIngestionApi());
 
-    expect((await api.request("/agents/")).status).toBe(404);
-    expect((await api.request("/agents/RANKBOT/tokens")).status).toBe(404);
+    const slashRes = await api.request("/agents/");
+    expect(slashRes.status).toBe(404);
+    const tokensRes = await api.request("/agents/RANKBOT/tokens");
+    expect(tokensRes.status).toBe(404);
     // A POST it DOES own still works, confirming the router is live.
     const owned = await api.request("/agents/RANKBOT/milestones", {
       method: "POST",

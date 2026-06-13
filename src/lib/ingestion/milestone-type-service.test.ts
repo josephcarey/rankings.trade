@@ -65,7 +65,8 @@ describe("registerLeagueMilestoneType", () => {
     const result = await registerLeagueMilestoneType(db, STRANGER, leagueId, "boss-down");
     expect(result).toEqual({ ok: false, reason: "not_found" });
     const list = await listLeagueMilestoneTypesForActor(db, OWNER, leagueId);
-    expect(list.ok && list.value.length).toBe(0);
+    expect(list.ok).toBe(true);
+    if (list.ok) expect(list.value.length).toBe(0);
   });
 
   it("returns not_found for an unknown league", async () => {

@@ -12,8 +12,8 @@
  * `type` match by string equality.
  */
 
-import type { Actor } from "../leagues/league-service";
 import type { MilestoneType } from "../db/milestone-types";
+import type { Actor } from "../leagues/league-service";
 
 import { getLeagueById } from "../db/leagues";
 import {

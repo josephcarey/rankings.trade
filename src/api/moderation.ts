@@ -6,6 +6,7 @@ import type { Actor } from "../lib/leagues/league-service";
 import type { CloudflareBindings } from "../platform";
 import type { AuthedVariables } from "./auth";
 
+import { createErrorResponse } from "../errors";
 import { isAdmin } from "../lib/auth/admin";
 import {
   deleteLog,
@@ -13,7 +14,6 @@ import {
   listAgentLogsForModerator,
   listAgentMilestonesForModerator,
 } from "../lib/ingestion/moderation-service";
-import { createErrorResponse } from "../errors";
 import { attachLocalUser, clerkAuth, getAuth, requireAuth } from "./auth";
 
 type ModerationEnv = {

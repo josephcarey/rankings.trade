@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { fileURLToPath } from "node:url";
 import { Hono } from "hono";
+import { fileURLToPath } from "node:url";
 import Database from "sql.js";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -9,8 +9,8 @@ import type { IngestionEnv } from "./ingestion";
 import { generateToken } from "../lib/agents/token";
 import { insertToken } from "../lib/db/agent-tokens";
 import { createAgent } from "../lib/db/agents";
-import { listLogsByAgent } from "../lib/db/logs";
 import { loadMigrations } from "../lib/db/loader";
+import { listLogsByAgent } from "../lib/db/logs";
 import { runMigrations } from "../lib/db/migrate";
 import { listMilestonesByAgent } from "../lib/db/milestones";
 import { createSqliteD1 } from "../lib/db/sqlite-d1-adapter";
@@ -77,7 +77,8 @@ describe("POST /:symbol/logs", () => {
     const response = await post("/OTHERBOT/logs", { text: "hi" }, `Bearer ${rawToken}`);
     expect(response.status).toBe(403);
     expect(((await response.json()) as any).error.code).toBe("forbidden");
-    expect((await listLogsByAgent(db, agentId)).length).toBe(0);
+    const logs = await listLogsByAgent(db, agentId);
+    expect(logs.length).toBe(0);
   });
 
   it("stores a valid log (201) and is case-insensitive on the symbol", async () => {

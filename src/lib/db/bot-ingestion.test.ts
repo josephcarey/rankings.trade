@@ -5,15 +5,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createAgent } from "./agents";
 import { recordTokenHit } from "./ingestion-rate";
 import { addMember } from "./league-members";
-import { getLogById, insertLog, listLogsByAgent, softDeleteLog } from "./logs";
 import { loadMigrations } from "./loader";
+import { insertLog, listLogsByAgent, softDeleteLog } from "./logs";
 import { runMigrations } from "./migrate";
-import {
-  getMilestoneById,
-  insertMilestone,
-  listMilestonesByAgent,
-  softDeleteMilestone,
-} from "./milestones";
 import {
   insertLeagueMilestoneType,
   isGlobalMilestoneType,
@@ -21,6 +15,12 @@ import {
   listGlobalMilestoneTypes,
   listLeagueMilestoneTypes,
 } from "./milestone-types";
+import {
+  getMilestoneById,
+  insertMilestone,
+  listMilestonesByAgent,
+  softDeleteMilestone,
+} from "./milestones";
 import { createSqliteD1 } from "./sqlite-d1-adapter";
 
 const migrationsDir = fileURLToPath(new URL("../../../migrations", import.meta.url));
@@ -79,7 +79,8 @@ describe("migration 0006/0007 — bot ingestion schema", () => {
   it("re-running the seed migration is idempotent", async () => {
     const again = await runMigrations(db, await loadMigrations(migrationsDir));
     expect(again.applied).toEqual([]);
-    expect((await listGlobalMilestoneTypes(db)).length).toBe(6);
+    const types = await listGlobalMilestoneTypes(db);
+    expect(types.length).toBe(6);
   });
 });
 
@@ -88,7 +89,8 @@ describe("logs db helpers", () => {
   let agentId: number;
   beforeEach(async () => {
     db = await makeDb();
-    agentId = (await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 })).id;
+    const agent = await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 });
+    agentId = agent.id;
   });
 
   it("inserts and lists non-deleted logs newest-first", async () => {
@@ -123,7 +125,8 @@ describe("milestones db helpers", () => {
   let agentId: number;
   beforeEach(async () => {
     db = await makeDb();
-    agentId = (await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 })).id;
+    const agent = await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 });
+    agentId = agent.id;
   });
 
   it("stores a tolerant unknown type with metadata", async () => {
@@ -134,7 +137,8 @@ describe("milestones db helpers", () => {
     });
     expect(m.type).toBe("warp-core-online");
     expect(m.metadata).toBe('{"sector":"X1-AB"}');
-    expect((await getMilestoneById(db, m.id))?.id).toBe(m.id);
+    const fetched = await getMilestoneById(db, m.id);
+    expect(fetched?.id).toBe(m.id);
   });
 
   it("lists non-deleted milestones and soft-deletes", async () => {
@@ -152,7 +156,8 @@ describe("milestone-types registry helpers", () => {
   let leagueId: number;
   beforeEach(async () => {
     db = await makeDb();
-    agentId = (await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 })).id;
+    const agent = await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 });
+    agentId = agent.id;
     leagueId = await newLeague(db);
   });
 
@@ -178,7 +183,8 @@ describe("milestone-types registry helpers", () => {
       created_by_user_id: 7,
     });
     expect(dup).toBeNull();
-    expect((await listLeagueMilestoneTypes(db, leagueId)).map((t) => t.key)).toEqual([
+    const leagueTypes = await listLeagueMilestoneTypes(db, leagueId);
+    expect(leagueTypes.map((t) => t.key)).toEqual([
       "boss-down",
     ]);
   });

@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "../leagues/league-service";
 
 import { createAgent } from "../db/agents";
-import { insertLog, listLogsByAgent } from "../db/logs";
 import { loadMigrations } from "../db/loader";
+import { insertLog, listLogsByAgent } from "../db/logs";
 import { runMigrations } from "../db/migrate";
 import { insertMilestone, listMilestonesByAgent } from "../db/milestones";
 import { createSqliteD1 } from "../db/sqlite-d1-adapter";
@@ -37,8 +37,10 @@ describe("canModerateAgentContent", () => {
   let unclaimedId: number;
   beforeEach(async () => {
     db = await makeDb();
-    ownedId = (await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 })).id;
-    unclaimedId = (await createAgent(db, { symbol: "SCRAPED" })).id;
+    const owned = await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 });
+    ownedId = owned.id;
+    const unclaimed = await createAgent(db, { symbol: "SCRAPED" });
+    unclaimedId = unclaimed.id;
   });
 
   it("allows the agent owner and any admin", async () => {
@@ -63,8 +65,10 @@ describe("deleteLog", () => {
   let logId: number;
   beforeEach(async () => {
     db = await makeDb();
-    agentId = (await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 })).id;
-    logId = (await insertLog(db, { agent_id: agentId, text: "spam" })).id;
+    const agent = await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 });
+    agentId = agent.id;
+    const log = await insertLog(db, { agent_id: agentId, text: "spam" });
+    logId = log.id;
   });
 
   it("lets the owner soft-delete and records the moderator + reason", async () => {
@@ -78,13 +82,15 @@ describe("deleteLog", () => {
   });
 
   it("lets an admin soft-delete", async () => {
-    expect((await deleteLog(db, ADMIN, logId)).ok).toBe(true);
+    const result = await deleteLog(db, ADMIN, logId);
+    expect(result.ok).toBe(true);
   });
 
   it("hides another owner's content from a stranger (not_found, IDOR) without deleting", async () => {
     const result = await deleteLog(db, STRANGER, logId);
     expect(result).toEqual({ ok: false, reason: "not_found" });
-    expect((await listLogsByAgent(db, agentId)).length).toBe(1);
+    const logs = await listLogsByAgent(db, agentId);
+    expect(logs.length).toBe(1);
   });
 
   it("returns not_found for an unknown id (same shape as unauthorized)", async () => {
@@ -92,7 +98,8 @@ describe("deleteLog", () => {
   });
 
   it("is idempotent: a second delete returns not_found", async () => {
-    expect((await deleteLog(db, OWNER, logId)).ok).toBe(true);
+    const first = await deleteLog(db, OWNER, logId);
+    expect(first.ok).toBe(true);
     expect(await deleteLog(db, OWNER, logId)).toEqual({ ok: false, reason: "not_found" });
   });
 });
@@ -103,14 +110,19 @@ describe("deleteMilestone", () => {
   let milestoneId: number;
   beforeEach(async () => {
     db = await makeDb();
-    agentId = (await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 })).id;
-    milestoneId = (
-      await insertMilestone(db, { agent_id: agentId, type: "first-jump", metadata: null })
-    ).id;
+    const agent = await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 });
+    agentId = agent.id;
+    const milestone = await insertMilestone(db, {
+      agent_id: agentId,
+      type: "first-jump",
+      metadata: null,
+    });
+    milestoneId = milestone.id;
   });
 
   it("lets the owner delete and excludes it from reads", async () => {
-    expect((await deleteMilestone(db, OWNER, milestoneId)).ok).toBe(true);
+    const result = await deleteMilestone(db, OWNER, milestoneId);
+    expect(result.ok).toBe(true);
     expect(await listMilestonesByAgent(db, agentId)).toEqual([]);
   });
 
@@ -119,7 +131,8 @@ describe("deleteMilestone", () => {
       ok: false,
       reason: "not_found",
     });
-    expect((await listMilestonesByAgent(db, agentId)).length).toBe(1);
+    const milestones = await listMilestonesByAgent(db, agentId);
+    expect(milestones.length).toBe(1);
   });
 });
 
@@ -127,13 +140,15 @@ describe("listAgentLogsForModerator", () => {
   let db: D1Database;
   beforeEach(async () => {
     db = await makeDb();
-    const agentId = (await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 })).id;
+    const agent = await createAgent(db, { symbol: "RANKBOT", owner_user_id: 7 });
+    const agentId = agent.id;
     await insertLog(db, { agent_id: agentId, text: "one" });
   });
 
   it("returns logs for the owner and hides existence from a stranger", async () => {
     const owner = await listAgentLogsForModerator(db, OWNER, "RANKBOT");
-    expect(owner.ok && owner.value.length).toBe(1);
+    expect(owner.ok).toBe(true);
+    if (owner.ok) expect(owner.value.length).toBe(1);
     expect(await listAgentLogsForModerator(db, STRANGER, "RANKBOT")).toEqual({
       ok: false,
       reason: "not_found",

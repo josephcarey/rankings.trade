@@ -12,10 +12,10 @@
  */
 
 /** Default window length: one minute. */
-export const DEFAULT_WINDOW_MS = 60_000;
+const DEFAULT_WINDOW_MS = 60_000;
 
 /** Default max ingestion requests per token per window. */
-export const DEFAULT_RATE_LIMIT = 60;
+const DEFAULT_RATE_LIMIT = 60;
 
 /** Tunable limiter configuration. */
 export type RateLimitConfig = {

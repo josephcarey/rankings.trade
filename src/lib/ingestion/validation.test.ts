@@ -42,7 +42,7 @@ describe("validateLogText", () => {
     });
   });
 
-  it.each([null, undefined, 42, "", "   "])("rejects %j", (raw) => {
+  it.each([null, undefined, 42, "", ' '.repeat(3)])("rejects %j", (raw) => {
     expect(validateLogText(raw)).toEqual({ ok: false, reason: "invalid_text" });
   });
 
@@ -67,7 +67,7 @@ describe("validateMilestoneType", () => {
     });
   });
 
-  it.each([null, 42, "", "   ", "has space", "bad_key"])(
+  it.each([null, 42, "", ' '.repeat(3), "has space", "bad_key"])(
     "rejects malformed %j",
     (raw) => {
       expect(validateMilestoneType(raw)).toEqual({
@@ -81,7 +81,7 @@ describe("validateMilestoneType", () => {
 describe("validateMetadata", () => {
   it("treats null/undefined as a stored NULL", () => {
     expect(validateMetadata(null)).toEqual({ ok: true, value: null });
-    expect(validateMetadata(undefined)).toEqual({ ok: true, value: null });
+    expect(validateMetadata()).toEqual({ ok: true, value: null });
   });
 
   it("serializes a plain object canonically", () => {

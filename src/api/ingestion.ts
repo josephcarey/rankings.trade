@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import type { CloudflareBindings } from "../platform";
 import type { BotVariables } from "./bot-auth";
 
+import { createErrorResponse } from "../errors";
 import { normalizeSymbol } from "../lib/db/agents";
 import {
   enforceRateLimit,
@@ -12,7 +13,6 @@ import {
   submitLog,
   submitMilestone,
 } from "../lib/ingestion/ingestion-service";
-import { createErrorResponse } from "../errors";
 import { requireAgentToken } from "./bot-auth";
 
 type IngestionEnv = {
