@@ -71,3 +71,49 @@ a:hover {
   margin-inline: auto;
 }
 
+/* Prose utility — readable rendered-markdown content (rules/help pages) */
+.prose {
+  max-inline-size: 70ch;
+}
+
+.prose :is(h1, h2, h3, h4) {
+  line-height: var(--font-lineheight-1);
+}
+
+.prose h1 {
+  font-size: var(--font-size-fluid-2);
+}
+
+.prose h2 {
+  font-size: var(--font-size-4);
+  margin-block-start: var(--size-6);
+}
+
+.prose h3 {
+  font-size: var(--font-size-3);
+  margin-block-start: var(--size-5);
+}
+
+.prose :is(ul, ol) {
+  padding-inline-start: var(--size-5);
+}
+
+.prose li + li {
+  margin-block-start: var(--size-2);
+}
+
+.prose code {
+  background: var(--color-surface);
+  border-radius: var(--radius-1, 0.25rem);
+  font-size: 0.9em;
+  padding-inline: var(--size-1);
+}
+
+.prose blockquote {
+  border-inline-start: 0.25rem solid var(--color-text-muted);
+  color: var(--color-text-muted);
+  margin-inline: 0;
+  padding-inline-start: var(--size-3);
+}
+
+
