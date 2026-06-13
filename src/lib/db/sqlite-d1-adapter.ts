@@ -12,6 +12,8 @@ type SqlJsDatabase = {
     sql: string,
     params?: unknown[],
   ) => Array<{ columns: string[]; values: unknown[][] }>;
+  /** Rows modified by the most recently executed statement (sql.js API). */
+  getRowsModified: () => number;
   run: (sql: string, params?: unknown[]) => void;
 };
 
@@ -37,9 +39,12 @@ class SqliteD1Statement {
   }
 
   /** Execute a write statement. Used directly and by {@link SqliteD1Database.batch}. */
-  run(): Promise<{ success: true }> {
+  run(): Promise<{ meta: { changes: number }; success: true }> {
     this.db.run(this.sql, this.bindings);
-    return Promise.resolve({ success: true });
+    return Promise.resolve({
+      meta: { changes: this.db.getRowsModified() },
+      success: true,
+    });
   }
 
   private rows<T>(): T[] {
