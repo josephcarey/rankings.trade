@@ -35,6 +35,8 @@
         rankings.trade
       </button>
       <div class="nav-spacer"></div>
+      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
+      <a class="nav-link" href="/rules">Rules</a>
       {#if data.nav.signedIn}
         <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static authed route -->
         <a class="nav-link" href="/agents">Agents</a>

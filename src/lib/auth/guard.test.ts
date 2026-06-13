@@ -39,8 +39,16 @@ describe("requiresAuth", () => {
     "/sign-in",
     "/sign-in/sso-callback",
     "/api/me",
+    "/rules",
+    "/rules/",
+    "/rules/leagues",
   ])("treats %s as public", (pathname) => {
     expect(requiresAuth(pathname)).toBe(false);
+  });
+
+  it("keeps the rules/help pages public so logged-out visitors can read them", () => {
+    expect(requiresAuth("/rules")).toBe(false);
+    expect(requiresAuth("/rules/ratings")).toBe(false);
   });
 
   it("does not match a path that merely shares the prefix string", () => {
@@ -90,6 +98,14 @@ describe("requireAuthHandle", () => {
 
   it("lets a signed-out request through to a public path", async () => {
     const { args, resolve } = makeArgs(null, "/leaderboard");
+
+    await requireAuthHandle(args);
+
+    expect(resolve).toHaveBeenCalledOnce();
+  });
+
+  it("lets a signed-out request through to a rules/help page", async () => {
+    const { args, resolve } = makeArgs(null, "/rules/leagues");
 
     await requireAuthHandle(args);
 
