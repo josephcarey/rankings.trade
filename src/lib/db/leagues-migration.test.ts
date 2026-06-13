@@ -82,6 +82,20 @@ describe("0004_leagues migration", () => {
     expect(id).toBeGreaterThan(0);
   });
 
+  it("allows a NULL owner (system-owned league)", async () => {
+    await db
+      .prepare("INSERT INTO leagues (name, owner_user_id) VALUES (?, ?)")
+      .bind("System League", null)
+      .run();
+
+    const row = await db
+      .prepare("SELECT owner_user_id FROM leagues WHERE name = ?")
+      .bind("System League")
+      .first<{ owner_user_id: number | null }>();
+
+    expect(row?.owner_user_id).toBeNull();
+  });
+
   it("permits only one active membership per agent per league", async () => {
     const leagueId = await insertLeague(db);
     await addMember(db, leagueId, 1);

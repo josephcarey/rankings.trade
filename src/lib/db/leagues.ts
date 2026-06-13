@@ -19,7 +19,8 @@ export type League = {
   name: string;
   description: string | null;
   visibility: Visibility;
-  owner_user_id: number;
+  /** Local `users.id` of the owner, or `null` for a system-owned (seeded) league. */
+  owner_user_id: number | null;
   created_at: string;
   updated_at: string;
 };

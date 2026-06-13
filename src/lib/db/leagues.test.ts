@@ -95,8 +95,12 @@ describe("league reads", () => {
     await createLeague(db, { name: "Priv", owner_user_id: 1 });
     await createLeague(db, { name: "Pub", owner_user_id: 1, visibility: "public" });
 
+    // The seeded SpaceJam starter league (migration 0005) is also public.
     const publics = await listPublicLeagues(db);
-    expect(publics.map((l: League) => l.name)).toEqual(["Pub"]);
+    const names = publics.map((l: League) => l.name);
+    expect(names).toContain("Pub");
+    expect(names).toContain("SpaceJam");
+    expect(names).not.toContain("Priv");
   });
 });
 

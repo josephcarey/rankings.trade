@@ -14,11 +14,18 @@ authorization rules so the implementation cards can proceed without re-litigatin
 | `name`          | TEXT     | NOT NULL, 1–80 chars (CHECK)                                 |
 | `description`   | TEXT     | NULL — optional (e.g. to frame an opt-in challenge)         |
 | `visibility`    | TEXT     | NOT NULL DEFAULT `'private'`, CHECK IN (`'private'`,`'public'`) |
-| `owner_user_id` | INTEGER  | NOT NULL REFERENCES `users(id)` — the creating user          |
+| `owner_user_id` | INTEGER  | NULL REFERENCES `users(id)` — the creating user, or NULL for a system-owned league |
 | `created_at`    | DATETIME | NOT NULL DEFAULT CURRENT_TIMESTAMP                          |
 | `updated_at`    | DATETIME | NOT NULL DEFAULT CURRENT_TIMESTAMP                          |
 
 Private by default. `owner_user_id` is the local `users.id` (not the Clerk id).
+It is **nullable**: user-created leagues always have an owner, but the seeded
+starter league (E12, migration 0005) is **system-owned** (`owner_user_id IS NULL`).
+A NULL-owner league has no individual owner, so the owner-or-admin guard
+(`actor.isAdmin || owner_user_id === actor.userId`) falls through to **admin-only**
+management — there is no crash and no IDOR, since `null === <userId>` is always
+false. Visibility/read guards are unaffected (a public starter league is
+world-readable regardless of owner).
 
 ### `league_members` (temporal)
 
@@ -82,8 +89,9 @@ Private by default. `owner_user_id` is the local `users.id` (not the Clerk id).
   users are Clerk-provisioned and not removed). FKs are therefore plain references with
   **no cascade**. If deletion is introduced later, a follow-up migration must choose
   explicit `ON DELETE` behavior; nothing here assumes cascade.
-- **League ownership transfer is out of scope for v1.** A league always belongs to its
-  creator. (Admins can manage any league via the env allowlist, so there is no operational
+- **League ownership transfer is out of scope for v1.** A user-created league always
+  belongs to its creator; the seeded starter league is system-owned (NULL) and managed by
+  admins. (Admins can manage any league via the env allowlist, so there is no operational
   need to reassign `owner_user_id` in v1.)
 
 ## 3. Adding participants — two paths
@@ -142,5 +150,8 @@ Ownership compares the local `users.id` against `leagues.owner_user_id`.
 ## 7. Migration plan
 
 - `migrations/0004_leagues.sql` — the three tables + indexes above (this epic).
-- `migrations/0005_*` — **reserved** for the deferred starter-league seed (E12); not
-  consumed by this epic's PR.
+- `migrations/0005_seed_spacejam_league.sql` — the **SpaceJam** starter-league seed (E12):
+  auto-creates the 9 legacy callsigns as unclaimed agents (`INSERT OR IGNORE`), creates the
+  public, system-owned (`owner_user_id IS NULL`) "SpaceJam" league, and adds all 9 as active
+  members. Replicates the runtime add-by-callsign semantics in SQL so the seed and runtime
+  participant path stay consistent.

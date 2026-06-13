@@ -9,13 +9,17 @@
 -- SHA-256 hash (see src/lib/leagues/invite-token.ts), revocable and rotatable.
 -- v1 performs no physical user/agent deletion, so foreign keys use no cascade.
 -- Leagues are private by default and visibility is configurable to public.
+-- owner_user_id is NULLABLE: most leagues are owned by their creating user, but
+-- the seeded starter league (migration 0005) is SYSTEM-OWNED (NULL owner) and
+-- managed by admins only. Guards treat a NULL owner as "no individual owner", so
+-- owner-or-admin checks fall through to admin-only (see league-service.ts).
 CREATE TABLE leagues (
   id            INTEGER  PRIMARY KEY AUTOINCREMENT,
   name          TEXT     NOT NULL CHECK (LENGTH(name) BETWEEN 1 AND 80),
   description   TEXT     NULL,
   visibility    TEXT     NOT NULL DEFAULT 'private'
                          CHECK (visibility IN ('private', 'public')),
-  owner_user_id INTEGER  NOT NULL REFERENCES users(id),
+  owner_user_id INTEGER  NULL REFERENCES users(id),
   created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
