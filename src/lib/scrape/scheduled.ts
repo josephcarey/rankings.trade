@@ -20,19 +20,26 @@ import { createLogger as makeLogger } from "../../logger";
 import { glickoRatingTrigger } from "../ratings/trigger";
 import { finalizePendingRounds } from "../rounds/finalize";
 import { defaultFinalizationSeams } from "../rounds/seams";
+import { seasonCloseEvaluator, seasonCloseTrigger } from "../seasons/close";
+import { seasonResolver } from "../seasons/resolver";
 import { runScrape } from "./run";
 import { createSpaceTradersClient } from "./spacetraders-client";
 
 type Logger = ReturnType<typeof createLogger>;
 
 /**
- * Production finalization seams: Epic G's inert defaults with Epic H's real Glicko-2
- * rating trigger composed in. Epic I will likewise replace the season resolver/close
- * seams when it lands.
+ * Production finalization seams: Epic G's inert defaults with Epic H's real Glicko-2 rating
+ * trigger AND Epic I's real season resolver/close seams composed in. The resolver activates
+ * ranked rounds (mapping reset_date → the open season), which is what makes H's `ratingTrigger`
+ * actually fire in production; the close seams archive + close a season at its cutoff. H's
+ * trigger is preserved here — it is never dropped when I's seams are added.
  */
 const productionFinalizationSeams: FinalizationSeams = {
   ...defaultFinalizationSeams,
   ratingTrigger: glickoRatingTrigger,
+  seasonCloseEvaluator,
+  seasonCloseTrigger,
+  seasonResolver,
 };
 
 /** The subset of Cloudflare's `ScheduledEvent` the scrape needs. */
