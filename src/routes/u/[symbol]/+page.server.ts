@@ -6,6 +6,7 @@ import { buildLineChart } from "../../../lib/charts/line-chart";
 import { getAgentBySymbol, normalizeSymbol } from "../../../lib/db/agents";
 import { listUniverseCreditsSeries } from "../../../lib/db/credits";
 import { toLeaderboardRow } from "../../../lib/db/leaderboard";
+import { leaguesWithActiveMemberOwnedBy } from "../../../lib/db/league-members";
 import { listActiveLeaguesForAgent } from "../../../lib/db/leagues";
 import { listLogsByAgent } from "../../../lib/db/logs";
 import { recognizedTypesForAgent } from "../../../lib/db/milestone-types";
@@ -16,9 +17,8 @@ import {
 } from "../../../lib/db/rating-history";
 import { getOpenSeason, listAgentSeasonHistory } from "../../../lib/db/seasons";
 import { resolveActor } from "../../../lib/leagues/actor";
-import { getViewableLeague } from "../../../lib/leagues/league-service";
 import { describeMilestone } from "../../../lib/render/milestone";
-import { computeSeasonStandings } from "../../../lib/seasons/standings";
+import { readOpenSeasonStandingForAgent } from "../../../lib/seasons/read-standings";
 
 /**
  * Public agent profile (`/u/[symbol]`).
@@ -51,8 +51,7 @@ export const load: PageServerLoad = async ({ locals, params, platform }) => {
   let ratingChart = buildLineChart([], []);
   let delta = null;
   if (season) {
-    const standings = await computeSeasonStandings(db, season.id);
-    const row = standings.find((s) => s.agent_id === agent.id);
+    const row = await readOpenSeasonStandingForAgent(db, season.id, agent.id);
     current = row ? toLeaderboardRow(row, agent.symbol) : null;
     const series = await listUniverseCreditsSeries(db, season.id, [agent.id]);
     chart = buildLineChart(
@@ -70,19 +69,38 @@ export const load: PageServerLoad = async ({ locals, params, platform }) => {
     delta = await getAgentRatingDelta(db, agent.id, season.id);
   }
 
-  // Leagues this agent is in, filtered to what the viewer may see.
+  // Leagues this agent is in, filtered to what the viewer may see — resolved in one batched
+  // visibility query rather than a per-league check (audit §8.2). Public leagues are visible to
+  // anyone; a private league is visible to its owner, an admin, or a viewer who owns an active
+  // member agent (mirrors `getViewableLeague`).
   const active = await listActiveLeaguesForAgent(db, agent.id);
-  const leagues: { id: number; name: string; visibility: string }[] = [];
-  for (const league of active) {
-    const viewable = await getViewableLeague(db, actor, league.id);
-    if (viewable.ok) {
-      leagues.push({
-        id: league.id,
-        name: league.name,
-        visibility: league.visibility,
-      });
-    }
-  }
+  const ownedMemberLeagueIds = actor
+    ? await leaguesWithActiveMemberOwnedBy(
+        db,
+        active
+          .filter(
+            (l) =>
+              l.visibility === "private" &&
+              !(actor.isAdmin || l.owner_user_id === actor.userId),
+          )
+          .map((l) => l.id),
+        actor.userId,
+      )
+    : new Set<number>();
+  const leagues = active
+    .filter(
+      (l) =>
+        l.visibility === "public" ||
+        (actor !== null &&
+          (actor.isAdmin ||
+            l.owner_user_id === actor.userId ||
+            ownedMemberLeagueIds.has(l.id))),
+    )
+    .map((league) => ({
+      id: league.id,
+      name: league.name,
+      visibility: league.visibility,
+    }));
   const visibleLeagueIds = leagues.map((l) => l.id);
 
   // Milestones + logs (recognition restricted to viewer-visible leagues).

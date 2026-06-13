@@ -53,19 +53,3 @@ export function resolvePagination(
 ): Pagination {
   return { limit: clampLimit(rawLimit), offset: clampOffset(rawOffset) };
 }
-
-/**
- * Slice an in-memory result set to one page and wrap it with the total count.
- * `total` is the full set size (computed BEFORE slicing) so clients can paginate.
- */
-export function paginate<T>(
-  items: readonly T[],
-  { limit, offset }: Pagination,
-): { items: T[]; limit: number; offset: number; total: number } {
-  return {
-    items: items.slice(offset, offset + limit),
-    limit,
-    offset,
-    total: items.length,
-  };
-}

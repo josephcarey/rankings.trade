@@ -179,3 +179,28 @@ export async function userOwnsActiveMember(
     .first<{ present: number }>();
   return row?.present === 1;
 }
+
+/**
+ * From a set of league ids, the subset in which `userId` owns at least one active member agent
+ * — the batched form of {@link userOwnsActiveMember}, so a viewer's visibility over many leagues
+ * is resolved in ONE query instead of N (audit §8.2). Empty input ⇒ empty set.
+ */
+export async function leaguesWithActiveMemberOwnedBy(
+  db: D1Database,
+  leagueIds: readonly number[],
+  userId: number,
+): Promise<Set<number>> {
+  if (leagueIds.length === 0) return new Set();
+  const placeholders = leagueIds.map(() => "?").join(", ");
+  const { results } = await db
+    .prepare(
+      `SELECT DISTINCT m.league_id AS league_id
+       FROM league_members m
+       JOIN agents a ON a.id = m.agent_id
+       WHERE m.left_at IS NULL AND a.owner_user_id = ?
+         AND m.league_id IN (${placeholders})`,
+    )
+    .bind(userId, ...leagueIds)
+    .all<{ league_id: number }>();
+  return new Set((results ?? []).map((r) => r.league_id));
+}
