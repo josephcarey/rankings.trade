@@ -14,7 +14,7 @@
 
 import type { Season } from "../db/seasons";
 
-import { getAgentBySymbol } from "../db/agents";
+import { getAgentBySymbol, getSymbolsByIds } from "../db/agents";
 import {
   getActiveMembership,
   userOwnsActiveMember,
@@ -112,6 +112,7 @@ export type Viewer = {
 /** One leaderboard entry within the open season. */
 type LeaderboardRow = {
   rank: number;
+  agent_symbol: string;
   agent_id: number;
   rating: number;
   rd: number;
@@ -300,8 +301,13 @@ export async function getUniverseLeaderboard(
   }
 
   const standings = await computeSeasonStandings(db, openSeason.id);
+  const symbols = await getSymbolsByIds(
+    db,
+    standings.map((s) => s.agent_id),
+  );
   const rows: LeaderboardRow[] = standings.map((s) => ({
     rank: s.final_rank,
+    agent_symbol: symbols.get(s.agent_id) ?? "?",
     agent_id: s.agent_id,
     rating: s.final_rating,
     rd: s.final_rd,

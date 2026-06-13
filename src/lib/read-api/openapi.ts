@@ -391,6 +391,7 @@ export const openApiDocument = {
         type: "object",
         required: [
           "rank",
+          "agent_symbol",
           "agent_id",
           "rating",
           "rd",
@@ -399,6 +400,7 @@ export const openApiDocument = {
         ],
         properties: {
           rank: { type: "integer" },
+          agent_symbol: { type: "string" },
           agent_id: { type: "integer" },
           rating: { type: "number" },
           rd: { type: "number" },
