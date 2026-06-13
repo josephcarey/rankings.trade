@@ -129,6 +129,36 @@ describe("applyRatingPeriod + reads", () => {
     const roundId = await insertRankedRound(db, "2026-06-01", 1, true);
     expect(await isRatingPeriodApplied(db, roundId)).toBe(false);
   });
+
+  it("throws (fail-loud) rather than splitting a period across batches", async () => {
+    const roundId = await insertRankedRound(db, "2026-06-01", 1, true);
+    // 100 rating updates + 1 marker = 101 statements > D1's 100-statement batch limit.
+    const updates = Array.from({ length: 100 }, (_, i) => ({
+      agentId: i + 1,
+      rating: 1500,
+      rd: 350,
+      volatility: 0.06,
+    }));
+    await expect(
+      applyRatingPeriod(db, { roundId, seasonId: 1, updates }),
+    ).rejects.toThrow(/too large for a single atomic batch/);
+    // Nothing was applied — not even the marker.
+    expect(await isRatingPeriodApplied(db, roundId)).toBe(false);
+    expect(await listSeasonRatings(db, 1)).toHaveLength(0);
+  });
+
+  it("applies the largest period that still fits one atomic batch (99 agents + marker)", async () => {
+    const roundId = await insertRankedRound(db, "2026-06-01", 1, true);
+    const updates = Array.from({ length: 99 }, (_, i) => ({
+      agentId: i + 1,
+      rating: 1500,
+      rd: 350,
+      volatility: 0.06,
+    }));
+    await applyRatingPeriod(db, { roundId, seasonId: 1, updates });
+    expect(await isRatingPeriodApplied(db, roundId)).toBe(true);
+    expect(await listSeasonRatings(db, 1)).toHaveLength(99);
+  });
 });
 
 describe("hasEarlierUnappliedRankedRound — chronological barrier", () => {

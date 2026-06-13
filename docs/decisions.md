@@ -141,7 +141,18 @@ these as fixed inputs. The single source of truth in code is `src/lib/ratings/co
   `agent_id`), never raw scraped participants.
 - **Season scope:** `ratings` is keyed by `(agent_id, season_id)`; `season_id` is taken from
   `round.season_id`. The per-season baseline reset is Epic I's job — H only keys by season.
-- **Idempotency:** the trigger applies the whole period in a single atomic D1 `batch()` and
-  stamps each rating row's `last_round_id`. A re-invocation before `rounds.ratings_applied_at`
-  is set detects the round was already applied (any season rating row with
-  `last_round_id = round.id`) and is a no-op — so a crash/replay never double-applies ratings.
+- **Idempotency:** the trigger applies the whole period in a single atomic D1 `batch()` that
+  upserts every rating row **and** inserts a dedicated `rating_periods` marker row
+  (`round_id` PRIMARY KEY) together. A re-invocation before `rounds.ratings_applied_at` is set
+  detects the marker (`isRatingPeriodApplied`) and is a no-op — so a crash/replay never
+  double-applies. A separate marker table is used instead of inspecting `ratings.last_round_id`
+  because a later round can overwrite `last_round_id`, which would make a last-round-based
+  check unsafe. (`last_round_id` is still stamped, but only as provenance, not the dedupe key.)
+  The single-batch apply is size-bounded by D1's 100-statement limit; `applyRatingPeriod`
+  **throws** rather than splitting a larger period across non-atomic batches (a multi-batch-safe
+  apply is a roadmap follow-up).
+- **Ordering (chronological barrier):** Glicko-2 updates are order-dependent, and the Epic G
+  orchestrator can finalize+apply a *later* ranked round before replaying an earlier pending
+  one after a crash. The trigger therefore refuses (throws) to apply a round while an earlier
+  ranked round in the same season is still unapplied (`hasEarlierUnappliedRankedRound`); since
+  the pending-trigger sweep runs in id order, it heals the ordering on its next pass.

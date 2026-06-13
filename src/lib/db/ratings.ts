@@ -120,9 +120,15 @@ export async function hasEarlierUnappliedRankedRound(
 
 /**
  * Persist one applied rating period: every agent's new state plus the `rating_periods`
- * marker, so a replay is a no-op. The marker is written in the final batch after the
- * rating upserts. Writes are chunked to respect D1's per-batch statement limit; within a
- * single batch D1 is atomic.
+ * marker, written in a SINGLE atomic `db.batch()` so a replay (which reruns the whole
+ * computation) is an all-or-nothing no-op.
+ *
+ * The whole period must fit in one D1 batch (≤ {@link D1_MAX_BATCH} statements, marker
+ * included) to stay atomic. If a season ever exceeds that, splitting across batches would
+ * leave ratings written without the marker — a later replay would then recompute from
+ * already-mutated states and double-apply. Rather than corrupt silently, this throws so
+ * the failure is loud; a multi-batch-safe apply (e.g. a pre-period snapshot) is the
+ * follow-up. At current scale (one league, single-digit agents) this never trips.
  */
 export async function applyRatingPeriod(
   db: D1Database,
@@ -130,13 +136,19 @@ export async function applyRatingPeriod(
 ): Promise<void> {
   const { roundId, seasonId, updates } = args;
 
+  // +1 for the marker insert that must commit atomically with the rating upserts.
+  if (updates.length + 1 > D1_MAX_BATCH) {
+    throw new Error(
+      `applyRatingPeriod: rating period too large for a single atomic batch ` +
+        `(${updates.length} agents > ${D1_MAX_BATCH - 1}); needs a multi-batch-safe apply`,
+    );
+  }
+
   const ratingStmt = db.prepare(UPSERT_RATING_SQL);
   const statements = updates.map((u) =>
     ratingStmt.bind(u.agentId, seasonId, u.rating, u.rd, u.volatility, roundId),
   );
   statements.push(db.prepare(INSERT_MARKER_SQL).bind(roundId, seasonId));
 
-  for (let i = 0; i < statements.length; i += D1_MAX_BATCH) {
-    await db.batch(statements.slice(i, i + D1_MAX_BATCH));
-  }
+  await db.batch(statements);
 }
