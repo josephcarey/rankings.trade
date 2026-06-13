@@ -270,4 +270,101 @@ describe("league detail page server", () => {
       ).rejects.toMatchObject({ status: 404 });
     });
   });
+
+  describe("invite actions", () => {
+    const runCreate = actions.createInvite as NonNullable<
+      typeof actions.createInvite
+    >;
+    const runRevoke = actions.revokeInvite as NonNullable<
+      typeof actions.revokeInvite
+    >;
+
+    // eslint-disable-next-line unicorn/consistent-function-scoping -- closes over per-test db
+    function base(id: string, user: unknown, userId: null | string) {
+      return {
+        locals: { user, userId },
+        params: { id },
+        platform: platform(db),
+        url: new URL("https://app.test/leagues/1"),
+      };
+    }
+
+    it("creates a join link and returns a shareable URL once", async () => {
+      const id = await newLeague(db, "private");
+      const result = (await runCreate(
+        base(String(id), OWNER.user, "u1") as never,
+      )) as { joinUrl: string };
+      expect(result.joinUrl).toMatch(
+        /^https:\/\/app\.test\/leagues\/join\/rtlnk_/,
+      );
+
+      const loaded = (await load({
+        locals: { user: OWNER.user, userId: "u1" },
+        params: { id: String(id) },
+        platform: platform(db),
+      } as never)) as { invites: { revoked_at: null | string }[] };
+      expect(loaded.invites).toHaveLength(1);
+    });
+
+    it("404s an invite create from a stranger", async () => {
+      const id = await newLeague(db, "private");
+      await expect(
+        runCreate(base(String(id), STRANGER.user, "u2") as never),
+      ).rejects.toMatchObject({ status: 404 });
+    });
+
+    it("rotates the join link and returns a fresh URL", async () => {
+      const runRotate = actions.rotateInvite as NonNullable<
+        typeof actions.rotateInvite
+      >;
+      const id = await newLeague(db, "private");
+      const first = (await runCreate(
+        base(String(id), OWNER.user, "u1") as never,
+      )) as { joinUrl: string };
+      const rotated = (await runRotate(
+        base(String(id), OWNER.user, "u1") as never,
+      )) as { joinUrl: string };
+      expect(rotated.joinUrl).toMatch(/\/leagues\/join\/rtlnk_/);
+      expect(rotated.joinUrl).not.toBe(first.joinUrl);
+
+      const loaded = (await load({
+        locals: { user: OWNER.user, userId: "u1" },
+        params: { id: String(id) },
+        platform: platform(db),
+      } as never)) as { invites: { revoked_at: null | string }[] };
+      const active = loaded.invites.filter((i) => i.revoked_at === null);
+      expect(active).toHaveLength(1);
+    });
+
+    it("revokes an invite by id", async () => {
+      const id = await newLeague(db, "private");
+      await runCreate(base(String(id), OWNER.user, "u1") as never);
+      const loaded = (await load({
+        locals: { user: OWNER.user, userId: "u1" },
+        params: { id: String(id) },
+        platform: platform(db),
+      } as never)) as { invites: { id: number }[] };
+      const inviteId = loaded.invites[0]?.id ?? 0;
+
+      const result = (await runRevoke({
+        locals: { user: OWNER.user, userId: "u1" },
+        params: { id: String(id) },
+        platform: platform(db),
+        request: formRequest({ inviteId: String(inviteId) }),
+      } as never)) as { revoked: number };
+      expect(result.revoked).toBe(inviteId);
+    });
+
+    it("404s a revoke of an unknown invite id", async () => {
+      const id = await newLeague(db, "private");
+      await expect(
+        runRevoke({
+          locals: { user: OWNER.user, userId: "u1" },
+          params: { id: String(id) },
+          platform: platform(db),
+          request: formRequest({ inviteId: "9999" }),
+        } as never),
+      ).rejects.toMatchObject({ status: 404 });
+    });
+  });
 });

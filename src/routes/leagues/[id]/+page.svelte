@@ -11,6 +11,17 @@
       ? action.error
       : undefined,
   );
+
+  const newJoinUrl = $derived(
+    (action?.action === "createInvite" || action?.action === "rotateInvite") &&
+      "joinUrl" in action
+      ? action.joinUrl
+      : undefined,
+  );
+
+  const activeInvites = $derived(
+    data.invites.filter((invite) => invite.revoked_at === null),
+  );
 </script>
 
 <svelte:head>
@@ -127,6 +138,48 @@
         </button>
       </form>
     </section>
+
+    <section class="invites flow">
+      <h2>Join link</h2>
+      <p class="lede">
+        Share a reusable link so people can join with their own agents. Revoke or
+        rotate it at any time to invalidate the old URL.
+      </p>
+
+      {#if newJoinUrl}
+        <div class="secret" role="status">
+          <p class="secret-label">Shareable join link — copy it now:</p>
+          <code class="secret-value">{newJoinUrl}</code>
+        </div>
+      {/if}
+
+      <div class="invite-actions">
+        <form method="POST" action="?/createInvite" use:formEnhance>
+          <button type="submit" class="submit-button">Create join link</button>
+        </form>
+        {#if activeInvites.length > 0}
+          <form method="POST" action="?/rotateInvite" use:formEnhance>
+            <button type="submit" class="secondary-button">Rotate</button>
+          </form>
+        {/if}
+      </div>
+
+      {#if activeInvites.length === 0}
+        <p class="empty">No active join link.</p>
+      {:else}
+        <ul class="invite-list">
+          {#each activeInvites as invite (invite.id)}
+            <li class="invite-row">
+              <code class="invite-prefix">{invite.token_prefix}…</code>
+              <form method="POST" action="?/revokeInvite" use:formEnhance>
+                <input type="hidden" name="inviteId" value={invite.id} />
+                <button type="submit" class="remove-button">Revoke</button>
+              </form>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </section>
   {/if}
 </section>
 
@@ -216,6 +269,70 @@
     margin-block-start: var(--size-6);
     padding-block-start: var(--size-4);
     border-block-start: var(--border-size-1) solid var(--color-surface);
+  }
+
+  .invites {
+    margin-block-start: var(--size-6);
+    padding-block-start: var(--size-4);
+    border-block-start: var(--border-size-1) solid var(--color-surface);
+  }
+
+  .lede {
+    color: var(--color-text-muted);
+  }
+
+  .secret {
+    padding: var(--size-3);
+    border: var(--border-size-1) solid var(--color-link);
+    border-radius: var(--radius-2);
+  }
+
+  .secret-label {
+    margin: 0 0 var(--size-2);
+    font-weight: var(--font-weight-7);
+  }
+
+  .secret-value {
+    word-break: break-all;
+    font-family: var(--font-mono, monospace);
+  }
+
+  .invite-actions {
+    display: flex;
+    gap: var(--size-2);
+    margin-block: var(--size-3);
+  }
+
+  .invite-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2);
+  }
+
+  .invite-row {
+    display: flex;
+    align-items: center;
+    gap: var(--size-3);
+    padding: var(--size-2) var(--size-3);
+    border: var(--border-size-1) solid var(--color-surface);
+    border-radius: var(--radius-2);
+  }
+
+  .invite-prefix {
+    font-family: var(--font-mono, monospace);
+  }
+
+  .secondary-button {
+    padding: var(--size-2) var(--size-4);
+    border: var(--border-size-1) solid var(--color-surface);
+    border-radius: var(--radius-2);
+    background: var(--color-background);
+    color: var(--color-text);
+    font-weight: var(--font-weight-7);
+    cursor: pointer;
   }
 
   .field {
