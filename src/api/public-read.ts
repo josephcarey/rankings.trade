@@ -57,10 +57,32 @@ async function resolveOptionalViewer(
   return { agentId: agent.id, ownerUserId: agent.owner_user_id };
 }
 
-/** Stable client key for rate-limiting: the bot token if present, else the client IP. */
-function clientKey(authHeader: null | string | undefined, ip: string): string {
+/**
+ * Stable client key for rate-limiting.
+ *
+ * Keys by the bot token ONLY when it passes the SAME validity check as viewer resolution — an
+ * active token whose snapshot owner still matches the agent's current owner — as `token:<id>`;
+ * otherwise keys by client IP. Keying by the raw, unvalidated bearer would let a caller send a
+ * fresh random `Authorization: Bearer <junk>` per request to land in a new bucket every time,
+ * evading the per-IP budget (audit §6.1); a stale (owner-mismatched) token must not earn its
+ * own bucket either, since it is not a valid identity.
+ */
+async function clientKey(
+  db: D1Database,
+  authHeader: null | string | undefined,
+  ip: string,
+): Promise<string> {
   const raw = parseBearer(authHeader);
-  return raw ? `token:${raw}` : `ip:${ip}`;
+  if (raw) {
+    const token = await findActiveTokenByHash(db, await hashToken(raw));
+    if (token) {
+      const agent = await getAgentById(db, token.agent_id);
+      if (agent && token.owner_user_id === agent.owner_user_id) {
+        return `token:${token.id}`;
+      }
+    }
+  }
+  return `ip:${ip}`;
 }
 
 /** Best-effort client IP from Cloudflare / proxy headers. */
@@ -83,7 +105,8 @@ function createRateLimit(
   now: () => Date,
 ): MiddlewareHandler<ReadEnv> {
   return async (context, next) => {
-    const key = clientKey(
+    const key = await clientKey(
+      context.env.DB,
       context.req.header("Authorization"),
       clientIp((name) => context.req.header(name)),
     );
