@@ -41,6 +41,8 @@
         <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static authed route -->
         <a class="nav-link" href="/agents">Agents</a>
         <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static authed route -->
+        <a class="nav-link" href="/leagues">Leagues</a>
+        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static authed route -->
         <a class="nav-link" href="/settings">Settings</a>
         <UserButton />
         <SignOutButton redirectUrl="/" class="nav-link" />
