@@ -1,6 +1,5 @@
 import type { Handler } from "hono";
 
-import { getAuth } from "@hono/clerk-auth";
 import { Hono } from "hono";
 
 import type { CloudflareBindings } from "../platform";
@@ -9,7 +8,7 @@ import type { AuthedVariables } from "./auth";
 import { createErrorResponse } from "../errors";
 import { transferAgentOwnership } from "../lib/agents/ownership-service";
 import { isAdmin } from "../lib/auth/admin";
-import { attachLocalUser, clerkAuth, requireAuth } from "./auth";
+import { attachLocalUser, clerkAuth, getAuth, requireAuth } from "./auth";
 
 type AdminEnv = {
   Bindings: CloudflareBindings;

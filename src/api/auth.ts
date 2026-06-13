@@ -1,6 +1,10 @@
-import type { MiddlewareHandler } from "hono";
+import type { ClerkClient } from "@clerk/backend";
+import type { AuthObject } from "@clerk/backend";
+import type { AuthOptions, GetAuthFn, GetAuthFnNoRequest } from "@clerk/backend/internal";
+import type { Context, MiddlewareHandler } from "hono";
 
-import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
+import { createClerkClient } from "@clerk/backend";
+import { getAuthObjectForAcceptedToken } from "@clerk/backend/internal";
 
 import type { ClerkUserLike } from "../lib/auth/clerk-identity";
 import type { User } from "../lib/db/users";
@@ -27,17 +31,64 @@ export const UNAUTHORIZED_ERROR = {
  * The keys are read inside the handler because the Cloudflare binding env is
  * only available per request, not at module load. The publishable key uses the
  * `PUBLIC_`-prefixed var name (via {@link getClerkKeys}), so the keys are passed
- * explicitly rather than relying on `@hono/clerk-auth`'s default env lookup.
+ * explicitly to Clerk's backend client rather than relying on default env lookup.
  *
  * Verifies the Clerk session and attaches the Clerk identity to the request
  * context for downstream handlers (and {@link requireAuth}).
  */
+declare module "hono" {
+  interface ContextVariableMap {
+    clerk: ClerkClient;
+    clerkAuth: GetAuthFnNoRequest;
+  }
+}
+
+/**
+ * Reads the Clerk auth object attached by {@link clerkAuth}.
+ *
+ * This preserves the small API surface the app previously consumed from
+ * `@hono/clerk-auth`, while avoiding its Clerk v2/v3 dependency tree.
+ */
+export const getAuth: GetAuthFn<Context> = ((context: Context, options?: AuthOptions) =>
+  context.get("clerkAuth")(options as never)) as GetAuthFn<Context>;
+
 export const clerkAuth: MiddlewareHandler<{
   Bindings: CloudflareBindings;
 }> = (context, next) => {
   const { publishableKey, secretKey } = getClerkKeys(context.env);
+  const clerkClient = createClerkClient({ publishableKey, secretKey });
 
-  return clerkMiddleware({ publishableKey, secretKey })(context, next);
+  return (async () => {
+    const requestState = await clerkClient.authenticateRequest(context.req.raw, {
+      acceptsToken: "any",
+      publishableKey,
+      secretKey,
+    });
+
+    for (const [key, value] of requestState.headers.entries()) {
+      context.res.headers.append(key, value);
+    }
+
+    const locationHeader = requestState.headers.get("location");
+    if (locationHeader) {
+      return context.redirect(locationHeader, 307);
+    }
+    if (requestState.status === "handshake") {
+      throw new Error("Clerk: unexpected handshake without redirect");
+    }
+
+    const toAuth = requestState.toAuth as (options?: AuthOptions) => AuthObject;
+    const authObjectFn = ((options?: AuthOptions) =>
+      getAuthObjectForAcceptedToken({
+        acceptsToken: "any",
+        authObject: toAuth(options),
+      })) as GetAuthFnNoRequest;
+
+    context.set("clerkAuth", authObjectFn);
+    context.set("clerk", clerkClient);
+
+    await next();
+  })();
 };
 
 /**
