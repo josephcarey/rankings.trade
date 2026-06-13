@@ -22,9 +22,9 @@
   <h1>
     <span class="agent-symbol">{data.agent.symbol}</span>
     {#if data.agent.verified === 0}
-      <span class="badge badge-unverified">Unverified</span>
+      <span class="badge badge-muted">Unverified</span>
     {:else}
-      <span class="badge badge-verified">Verified</span>
+      <span class="badge badge-accent">Verified</span>
     {/if}
   </h1>
   <p class="lede">
@@ -77,9 +77,9 @@
               <dt>Status</dt>
               <dd>
                 {#if token.status === "active"}
-                  <span class="badge badge-active">Active</span>
+                  <span class="badge badge-accent">Active</span>
                 {:else}
-                  <span class="badge badge-revoked">Revoked</span>
+                  <span class="badge badge-muted">Revoked</span>
                 {/if}
               </dd>
             </div>
@@ -256,24 +256,5 @@
   .ghost-button.danger {
     color: var(--color-accent);
     border-color: var(--color-accent);
-  }
-
-  .badge {
-    font-size: var(--font-size-0);
-    font-weight: var(--font-weight-7);
-    padding: var(--size-1) var(--size-2);
-    border-radius: var(--radius-1);
-  }
-
-  .badge-unverified,
-  .badge-revoked {
-    background: var(--color-surface);
-    color: var(--color-text-muted);
-  }
-
-  .badge-verified,
-  .badge-active {
-    background: var(--color-link);
-    color: var(--color-background);
   }
 </style>

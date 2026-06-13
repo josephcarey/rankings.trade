@@ -53,23 +53,12 @@
     max-inline-size: 52rem;
   }
 
-  .eyebrow {
-    color: var(--color-accent);
-    font-size: var(--font-size-0);
-    font-weight: var(--font-weight-7);
-    letter-spacing: var(--font-letterspacing-3);
-    text-transform: uppercase;
-    margin: 0;
-  }
-
   h1 {
     font-size: var(--font-size-fluid-2);
     margin: 0;
   }
 
-  .lede,
-  .empty,
-  .muted {
+  .lede {
     color: var(--color-text-muted);
   }
 
@@ -119,11 +108,6 @@
   .rank {
     font-weight: var(--font-weight-7);
     min-inline-size: 2.5rem;
-  }
-
-  .callsign {
-    font-family: var(--font-mono, monospace);
-    font-weight: var(--font-weight-7);
   }
 
   .title {

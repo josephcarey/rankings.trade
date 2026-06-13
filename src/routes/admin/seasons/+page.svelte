@@ -36,7 +36,7 @@
       </label>
       <label>
         Unranked gap (days)
-        <input name="unranked_gap_days" type="number" min="0" value={openSeason.unranked_gap_days} />
+        <input name="unranked_gap_days" type="number" inputmode="numeric" min="0" value={openSeason.unranked_gap_days} />
       </label>
       <button type="submit">Update open season</button>
     </form>
@@ -53,7 +53,7 @@
       </label>
       <label>
         Unranked gap (days)
-        <input name="unranked_gap_days" type="number" min="0" value="0" />
+        <input name="unranked_gap_days" type="number" inputmode="numeric" min="0" value="0" />
       </label>
       <button type="submit">Open season</button>
     </form>
@@ -63,27 +63,29 @@
   {#if data.seasons.length === 0}
     <p>No seasons yet.</p>
   {:else}
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Label</th>
-          <th>Cutoff</th>
-          <th>Gap</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each data.seasons as season (season.id)}
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
           <tr>
-            <td>{season.id}</td>
-            <td>{season.label}</td>
-            <td>{season.cutoff_date}</td>
-            <td>{season.unranked_gap_days}</td>
-            <td>{season.closed_at === null ? "open" : `closed ${season.closed_at}`}</td>
+            <th>#</th>
+            <th>Label</th>
+            <th>Cutoff</th>
+            <th>Gap</th>
+            <th>Status</th>
           </tr>
-        {/each}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {#each data.seasons as season (season.id)}
+            <tr>
+              <td>{season.id}</td>
+              <td>{season.label}</td>
+              <td>{season.cutoff_date}</td>
+              <td>{season.unranked_gap_days}</td>
+              <td>{season.closed_at === null ? "open" : `closed ${season.closed_at}`}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
   {/if}
 </section>

@@ -22,7 +22,7 @@
     <p class="form-message" role="status">{$message}</p>
   {/if}
 
-  <form method="POST" use:enhance class="flow">
+  <form method="POST" use:enhance class="flow" aria-busy={$submitting}>
     <fieldset class="flow">
       <legend>Visibility</legend>
       <label class="choice">

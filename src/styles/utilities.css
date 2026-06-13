@@ -1,0 +1,135 @@
+/* Utility layer (CUBE) — single-purpose classes promoted from per-page copies
+   (§1.2, §3.2, §3.4) so the same text/badge treatments don't drift across routes. */
+
+/* Section eyebrow label. */
+.eyebrow {
+  color: var(--color-accent);
+  font-size: var(--font-size-0);
+  font-weight: var(--font-weight-7);
+  letter-spacing: var(--font-letterspacing-3);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* Muted / secondary text. */
+.muted,
+.empty {
+  color: var(--color-text-muted);
+}
+
+/* Monospace agent callsign. */
+.callsign {
+  font-family: var(--font-mono, monospace);
+  font-weight: var(--font-weight-7);
+}
+
+/* Visually-hidden content kept available to assistive tech. */
+.sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Low-priority table column, hidden on very small screens (§4.1). */
+@media (max-width: 640px) {
+  .optional-col {
+    display: none;
+  }
+}
+
+/* Badge primitive base + tones (§1.3, §3.2). Colour maps live here as data. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-1);
+  font-size: var(--font-size-0);
+  font-weight: var(--font-weight-7);
+  padding: var(--size-1) var(--size-2);
+  border-radius: var(--radius-1);
+  border: var(--border-size-1) solid transparent;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+/* Status tones. */
+.badge-accent {
+  background: var(--color-link);
+  color: var(--color-background);
+}
+
+.badge-muted {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+/* Title ladder tiers — off-ladder/low tiers cool & understated. */
+.tier-unranked {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+.tier-cadet {
+  background: var(--gray-2, #e5e7eb);
+  color: var(--gray-9, #1f2933);
+}
+.tier-ensign {
+  background: var(--cyan-2, #cffafe);
+  color: var(--cyan-11, #155e75);
+}
+.tier-lieutenant {
+  background: var(--teal-2, #ccfbf1);
+  color: var(--teal-11, #115e59);
+}
+.tier-commander {
+  background: var(--green-2, #dcfce7);
+  color: var(--green-11, #166534);
+}
+.tier-captain {
+  background: var(--lime-3, #d9f99d);
+  color: var(--lime-11, #3f6212);
+}
+.tier-commodore {
+  background: var(--yellow-3, #fef08a);
+  color: var(--yellow-11, #854d0e);
+}
+
+/* Elite tiers — warm, prominent, bordered. */
+.tier-colonel {
+  background: var(--orange-3, #fed7aa);
+  color: var(--orange-11, #9a3412);
+  border-color: var(--orange-7, #ea580c);
+}
+.tier-admiral {
+  background: var(--red-3, #fecaca);
+  color: var(--red-11, #991b1b);
+  border-color: var(--red-7, #dc2626);
+}
+.tier-fleet-admiral {
+  background: var(--violet-4, #ddd6fe);
+  color: var(--violet-11, #5b21b6);
+  border-color: var(--violet-7, #7c3aed);
+  box-shadow: 0 0 0 1px var(--violet-5, #c4b5fd);
+}
+
+/* Season podium placements. */
+.place-champion {
+  background: var(--yellow-3, #fef08a);
+  color: var(--yellow-11, #854d0e);
+  border-color: var(--yellow-7, #ca8a04);
+  box-shadow: 0 0 0 1px var(--yellow-5, #fde047);
+}
+.place-runner-up {
+  background: var(--gray-3, #e5e7eb);
+  color: var(--gray-9, #374151);
+  border-color: var(--gray-6, #9ca3af);
+}
+.place-third {
+  background: var(--orange-3, #fed7aa);
+  color: var(--orange-11, #9a3412);
+  border-color: var(--orange-7, #ea580c);
+}

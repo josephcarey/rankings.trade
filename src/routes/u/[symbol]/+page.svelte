@@ -1,7 +1,6 @@
 <script lang="ts">
-  import CreditsChart from "../../../lib/components/credits-chart.svelte";
   import DeltaIndicator from "../../../lib/components/delta-indicator.svelte";
-  import RatingChart from "../../../lib/components/rating-chart.svelte";
+  import LineChart from "../../../lib/components/line-chart.svelte";
   import SeasonBadge from "../../../lib/components/season-badge.svelte";
   import TitleBadge from "../../../lib/components/title-badge.svelte";
 
@@ -18,7 +17,7 @@
     <h1>
       <span class="callsign">{data.agent.symbol}</span>
       {#if data.agent.verified === 1}
-        <span class="badge badge-verified">Verified</span>
+        <span class="badge badge-accent">Verified</span>
       {/if}
     </h1>
 
@@ -49,12 +48,21 @@
 
   <section class="card flow">
     <h2>Credits this season</h2>
-    <CreditsChart chart={data.chart} caption={`Credits for ${data.agent.symbol} this season`} />
+    <LineChart
+      chart={data.chart}
+      caption={`Credits for ${data.agent.symbol} this season`}
+      emptyText="No credits history yet."
+      legend
+    />
   </section>
 
   <section class="card flow">
     <h2>Rating this season</h2>
-    <RatingChart chart={data.ratingChart} caption={`Glicko-2 rating for ${data.agent.symbol} this season`} />
+    <LineChart
+      chart={data.ratingChart}
+      caption={`Glicko-2 rating for ${data.agent.symbol} this season`}
+      emptyText="No rating history yet."
+    />
   </section>
 
   <section class="card flow">
@@ -67,7 +75,9 @@
           <li>
             <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- dynamic league route -->
             <a href={`/leagues/${league.id}`}>{league.name}</a>
-            <span class="badge badge-{league.visibility}">{league.visibility}</span>
+            <span class="badge {league.visibility === 'public' ? 'badge-accent' : 'badge-muted'}">
+              {league.visibility}
+            </span>
           </li>
         {/each}
       </ul>
@@ -80,7 +90,7 @@
       <p class="muted">No archived seasons yet.</p>
     {:else}
       <div class="table-scroll">
-        <table>
+        <table class="data-table">
           <thead>
             <tr>
               <th scope="col">Season</th>
@@ -88,7 +98,7 @@
               <th scope="col">Recognition</th>
               <th scope="col" class="num">Rank</th>
               <th scope="col" class="num">Rating</th>
-              <th scope="col" class="num">Rounds</th>
+              <th scope="col" class="num optional-col">Rounds</th>
             </tr>
           </thead>
           <tbody>
@@ -99,7 +109,7 @@
                 <td><SeasonBadge rank={row.rank} closed={row.closed} /></td>
                 <td class="num">{row.rank}</td>
                 <td class="num">{Math.round(row.rating)}</td>
-                <td class="num">{row.rankedRounds}</td>
+                <td class="num optional-col">{row.rankedRounds}</td>
               </tr>
             {/each}
           </tbody>
@@ -119,9 +129,9 @@
             <div class="feed-head">
               <span class="feed-label">{milestone.label}</span>
               {#if milestone.recognized}
-                <span class="badge badge-recognized">Recognized</span>
+                <span class="badge badge-accent">Recognized</span>
               {:else}
-                <span class="badge badge-generic">Generic</span>
+                <span class="badge badge-muted">Generic</span>
               {/if}
               <time class="muted">{milestone.ts}</time>
             </div>
@@ -169,10 +179,6 @@
     gap: var(--size-3);
   }
 
-  .callsign {
-    font-family: var(--font-mono, monospace);
-  }
-
   .current {
     display: flex;
     flex-wrap: wrap;
@@ -189,10 +195,6 @@
     font-weight: var(--font-weight-7);
   }
 
-  .muted {
-    color: var(--color-text-muted);
-  }
-
   .manage {
     display: inline-block;
     margin-block-start: var(--size-2);
@@ -203,27 +205,6 @@
     margin-block-start: var(--size-6);
     padding-block-start: var(--size-4);
     border-block-start: var(--border-size-1) solid var(--color-surface);
-  }
-
-  .table-scroll {
-    overflow-x: auto;
-  }
-
-  table {
-    inline-size: 100%;
-    border-collapse: collapse;
-  }
-
-  th,
-  td {
-    text-align: start;
-    padding: var(--size-2) var(--size-3);
-    border-block-end: var(--border-size-1) solid var(--color-surface);
-  }
-
-  .num {
-    text-align: end;
-    font-variant-numeric: tabular-nums;
   }
 
   .leagues,
@@ -280,26 +261,5 @@
     margin: var(--size-1) 0 0;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-  }
-
-  .badge {
-    font-size: var(--font-size-0);
-    font-weight: var(--font-weight-7);
-    padding: var(--size-1) var(--size-2);
-    border-radius: var(--radius-1);
-    text-transform: capitalize;
-  }
-
-  .badge-verified,
-  .badge-recognized,
-  .badge-public {
-    background: var(--color-link);
-    color: var(--color-background);
-  }
-
-  .badge-generic,
-  .badge-private {
-    background: var(--color-surface);
-    color: var(--color-text-muted);
   }
 </style>
