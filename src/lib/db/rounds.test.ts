@@ -2,6 +2,8 @@ import { fileURLToPath } from "node:url";
 import Database from "sql.js";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { loadMigrations } from "./loader";
+import { runMigrations } from "./migrate";
 import {
   beginFinalization,
   getFinalObservedAt,
@@ -22,8 +24,6 @@ import {
   type StandingInsert,
 } from "./rounds";
 import { createSqliteD1 } from "./sqlite-d1-adapter";
-import { loadMigrations } from "./loader";
-import { runMigrations } from "./migrate";
 
 const migrationsDir = fileURLToPath(new URL("../../../migrations", import.meta.url));
 
@@ -307,7 +307,7 @@ describe("rounds db helpers", () => {
       await insertMember(db, league, joinedLater, "2026-06-20 00:00:00", null);
 
       const members = await getMembersFrozenAt(db, frozen);
-      expect(members.map((m) => m.agent_symbol).sort()).toEqual(["LEFTLATER", "STAYED"]);
+      expect(members.map((m) => m.agent_symbol).toSorted()).toEqual(["LEFTLATER", "STAYED"]);
       expect(members.every((m) => m.league_id === league)).toBe(true);
     });
   });

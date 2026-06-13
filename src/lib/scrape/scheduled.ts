@@ -13,9 +13,12 @@
 import type { createLogger } from "../../logger";
 import type { CloudflareBindings } from "../../platform";
 import type { SpaceTradersClient } from "../db/snapshots-types";
+import type { FinalizationSeams } from "../rounds/seams";
 import type { ScrapeSummary } from "./run";
 
 import { createLogger as makeLogger } from "../../logger";
+import { finalizePendingRounds } from "../rounds/finalize";
+import { defaultFinalizationSeams } from "../rounds/seams";
 import { runScrape } from "./run";
 import { createSpaceTradersClient } from "./spacetraders-client";
 
@@ -30,15 +33,26 @@ export interface ScheduledScrapeEvent {
 /** Injectable seams for testing; production uses the defaults (live client + cron logger). */
 export interface ScheduledScrapeOverrides {
   client?: SpaceTradersClient;
+  /** Finalization sweep; defaults to {@link finalizePendingRounds}. */
+  finalize?: typeof finalizePendingRounds;
   logger?: Logger;
+  /** Finalization seams; defaults to the inert {@link defaultFinalizationSeams}. */
+  seams?: FinalizationSeams;
 }
 
 /**
- * Run one scheduled scrape round. Logs success and re-throws on failure.
+ * Run one scheduled scrape round, then finalize any round that has ended.
+ *
+ * The scrape runs first and its failure is fatal (re-thrown so the runtime records the
+ * invocation as failed for retry/alerting). Finalization runs only after a successful
+ * scrape, using the just-observed live `resetDate` to detect ended rounds. A
+ * finalization failure is logged but NOT re-thrown: the snapshot data is already safely
+ * written, and finalization is idempotent, so the next cron slot retries it cleanly
+ * rather than letting a finalization bug block scraping.
  *
  * @param env Worker bindings; only `DB` is used.
  * @param event The scheduled event (its `scheduledTime` stamps `observed_at`).
- * @param overrides Injected client/logger for tests.
+ * @param overrides Injected client/logger/seams for tests.
  */
 export async function scheduledScrape(
   env: CloudflareBindings,
@@ -48,9 +62,12 @@ export async function scheduledScrape(
   const logger = overrides.logger ?? makeLogger("cron");
   const client =
     overrides.client ?? createSpaceTradersClient({ fetch: globalThis.fetch });
+  const finalize = overrides.finalize ?? finalizePendingRounds;
+  const seams = overrides.seams ?? defaultFinalizationSeams;
 
+  let summary: ScrapeSummary;
   try {
-    return await runScrape({
+    summary = await runScrape({
       client,
       db: env.DB,
       logger,
@@ -62,4 +79,26 @@ export async function scheduledScrape(
     });
     throw error;
   }
+
+  try {
+    const result = await finalize(env.DB, summary.resetDate, seams);
+    if (
+      result.finalized.length > 0 ||
+      result.noData.length > 0 ||
+      result.pendingProcessed > 0
+    ) {
+      logger.info("finalization complete", {
+        alreadyFinalized: result.alreadyFinalized.length,
+        finalized: result.finalized.length,
+        noData: result.noData.length,
+        pendingProcessed: result.pendingProcessed,
+      });
+    }
+  } catch (error) {
+    logger.error("finalization failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  return summary;
 }

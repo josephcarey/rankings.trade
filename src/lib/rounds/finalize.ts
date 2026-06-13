@@ -46,7 +46,7 @@ import {
 } from "../db/rounds";
 
 /** Outcome of finalizing one reset_date. */
-export type FinalizeOutcome = "already_finalized" | "finalized" | "no_data";
+type FinalizeOutcome = "already_finalized" | "finalized" | "no_data";
 
 export interface FinalizeResult {
   outcome: FinalizeOutcome;
@@ -113,11 +113,11 @@ function buildLeagueStandings(
   const present = members
     .filter((m) => creditsBySymbol.has(m.agent_symbol))
     .map((m) => ({ member: m, credits: creditsBySymbol.get(m.agent_symbol) ?? 0 }))
-    .sort((a, b) => b.credits - a.credits || a.member.agent_symbol.localeCompare(b.member.agent_symbol));
+    .toSorted((a, b) => b.credits - a.credits || a.member.agent_symbol.localeCompare(b.member.agent_symbol));
 
   const absent = members
     .filter((m) => !creditsBySymbol.has(m.agent_symbol))
-    .sort((a, b) => a.agent_symbol.localeCompare(b.agent_symbol));
+    .toSorted((a, b) => a.agent_symbol.localeCompare(b.agent_symbol));
 
   const ranks = competitionRanks(present.map((p) => p.credits));
   const absentRank = present.length + 1;
@@ -164,7 +164,7 @@ function groupByLeague(members: FrozenMember[]): Map<number, FrozenMember[]> {
  * on its single-winner completion marker so a re-run after a crash is safe and the
  * (idempotent) seams are not required to dedupe on their own.
  */
-export async function processRoundTriggers(
+async function processRoundTriggers(
   db: D1Database,
   round: Round,
   seams: FinalizationSeams,

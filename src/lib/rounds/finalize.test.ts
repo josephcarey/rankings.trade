@@ -11,12 +11,12 @@ import type {
   SeasonResolver,
 } from "./seams";
 
-import { getRoundByResetDate, listStandings } from "../db/rounds";
-import { createSqliteD1 } from "../db/sqlite-d1-adapter";
 import { loadMigrations } from "../db/loader";
 import { runMigrations } from "../db/migrate";
-import { defaultFinalizationSeams } from "./seams";
+import { getRoundByResetDate, listStandings } from "../db/rounds";
+import { createSqliteD1 } from "../db/sqlite-d1-adapter";
 import { finalizePendingRounds, finalizeRound } from "./finalize";
+import { defaultFinalizationSeams } from "./seams";
 
 const migrationsDir = fileURLToPath(new URL("../../../migrations", import.meta.url));
 
@@ -329,7 +329,7 @@ describe("finalizePendingRounds", () => {
     await snap(db, "2026-06-01", "2026-06-01T00:00", "ALPHA", 5, 1); // live
 
     const summary = await finalizePendingRounds(db, "2026-06-01", defaultFinalizationSeams);
-    expect(summary.finalized.sort()).toEqual(["2026-04-01", "2026-05-01"]);
+    expect(summary.finalized.toSorted()).toEqual(["2026-04-01", "2026-05-01"]);
     expect(await getRoundByResetDate(db, "2026-06-01")).toBeNull();
   });
 

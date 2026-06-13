@@ -56,22 +56,22 @@ export interface FinalizationSeams {
 }
 
 /** No season system yet ⇒ every round is unranked and untagged. */
-export const defaultSeasonResolver: SeasonResolver = {
+const defaultSeasonResolver: SeasonResolver = {
   resolve: () => Promise.resolve({ isRanked: false, seasonId: null }),
 };
 
 /** Inert until Epic H lands. */
-export const noopRatingTrigger: RatingTrigger = {
+const noopRatingTrigger: RatingTrigger = {
   onRankedRoundFinalized: () => Promise.resolve(),
 };
 
 /** No seasons ⇒ never close. */
-export const defaultSeasonCloseEvaluator: SeasonCloseEvaluator = {
+const defaultSeasonCloseEvaluator: SeasonCloseEvaluator = {
   shouldCloseSeason: () => Promise.resolve(false),
 };
 
 /** Inert until Epic I lands. */
-export const noopSeasonCloseTrigger: SeasonCloseTrigger = {
+const noopSeasonCloseTrigger: SeasonCloseTrigger = {
   onSeasonClose: () => Promise.resolve(),
 };
 

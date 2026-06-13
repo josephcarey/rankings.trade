@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { fileURLToPath } from "node:url";
 import Database from "sql.js";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { createSqliteD1 } from "./sqlite-d1-adapter";
 import { loadMigrations } from "./loader";
 import { runMigrations } from "./migrate";
+import { createSqliteD1 } from "./sqlite-d1-adapter";
 
 const migrationsDir = fileURLToPath(new URL("../../../migrations", import.meta.url));
 
@@ -26,6 +26,28 @@ async function insertRound(db: D1Database, resetDate: string): Promise<number> {
     .bind(resetDate)
     .first<{ id: number }>();
   return row!.id;
+}
+
+async function insertRankedWithoutSeason(db: D1Database): Promise<void> {
+  await db
+    .prepare("INSERT INTO rounds (reset_date, is_ranked, season_id) VALUES (?, 1, NULL)")
+    .bind("2026-06-02")
+    .run();
+}
+
+async function insertStanding(
+  db: D1Database,
+  roundId: number,
+  leagueId: number | null,
+  symbol: string,
+  rank: number,
+): Promise<void> {
+  await db
+    .prepare(
+      "INSERT INTO round_standings (round_id, league_id, agent_symbol, final_rank) VALUES (?, ?, ?, ?)",
+    )
+    .bind(roundId, leagueId, symbol, rank)
+    .run();
 }
 
 describe("0008_rounds migration", () => {
@@ -64,13 +86,7 @@ describe("0008_rounds migration", () => {
   });
 
   it("rejects a ranked round without a season (ranked ⇒ season invariant)", async () => {
-    const attempt = async (): Promise<void> => {
-      await db
-        .prepare("INSERT INTO rounds (reset_date, is_ranked, season_id) VALUES (?, 1, NULL)")
-        .bind("2026-06-02")
-        .run();
-    };
-    await expect(attempt()).rejects.toThrow();
+    await expect(insertRankedWithoutSeason(db)).rejects.toThrow();
   });
 
   it("allows a ranked round once a concrete season is attached", async () => {
@@ -84,21 +100,6 @@ describe("0008_rounds migration", () => {
       .first<{ is_ranked: number; season_id: number }>();
     expect(round).toEqual({ is_ranked: 1, season_id: 7 });
   });
-
-  async function insertStanding(
-    db: D1Database,
-    roundId: number,
-    leagueId: number | null,
-    symbol: string,
-    rank: number,
-  ): Promise<void> {
-    await db
-      .prepare(
-        "INSERT INTO round_standings (round_id, league_id, agent_symbol, final_rank) VALUES (?, ?, ?, ?)",
-      )
-      .bind(roundId, leagueId, symbol, rank)
-      .run();
-  }
 
   it("deduplicates Universe standings per (round, agent) despite NULL league_id", async () => {
     const roundId = await insertRound(db, "2026-06-01");
