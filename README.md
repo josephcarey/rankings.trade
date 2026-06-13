@@ -173,3 +173,22 @@ Error codes are machine-readable (e.g., `NOT_FOUND`, `VALIDATION_ERROR`, `UNAUTH
 - **Dark mode:** Respects `prefers-color-scheme` media query
 - **Layout:** Root `+layout.svelte` renders nav shell with theme-aware styles
 
+### Rules / help pages
+
+Public, unauthenticated help content lives as in-repo markdown and is rendered at build
+time by [mdsvex](https://mdsvex.pngwn.io/) — no client-side markdown runtime is shipped.
+
+- **Content:** one markdown file per topic in `src/content/rules/`, each with frontmatter
+  `title`, `summary`, and `order`.
+- **Routes:** `/rules` lists the topics; `/rules/[slug]` renders a topic (the slug is the
+  filename without `.md`). Unknown slugs return a 404.
+- **Loader:** pure, unit-tested helpers in `src/lib/content/rules.ts` build the topic index
+  and resolve a slug; `src/lib/content/rules-registry.ts` globs the markdown modules.
+- **Access:** the `/rules` prefix is not in `AUTHED_PREFIXES` (`src/lib/auth/guard.ts`), so
+  these pages are public and readable while logged out.
+
+**To add a page:** drop a new `src/content/rules/<slug>.md` with the three frontmatter
+fields. It automatically appears on the `/rules` index (ordered by `order`) and renders at
+`/rules/<slug>` — no route or code changes needed. Run `bunx svelte-kit sync` before
+`svelte-check` when adding routes.
+
