@@ -8,6 +8,7 @@ import { createAdminApi } from "./admin";
 import { createAgentsApi } from "./agents";
 import { attachLocalUser, clerkAuth, requireAuth } from "./auth";
 import { createBotApi } from "./bot";
+import { createIngestionApi } from "./ingestion";
 
 export const api = new Hono<{ Bindings: CloudflareBindings }>().basePath(
   "/api",
@@ -53,6 +54,12 @@ authed.use("*", clerkAuth, requireAuth, attachLocalUser);
 authed.get("/", (context) => context.json({ user: context.get("user") }));
 
 api.route("/me", authed);
+
+// Bot-token ingestion routes (POST /:symbol/logs|milestones) MUST be mounted
+// before the Clerk-session agents router: their terminal handlers respond
+// without falling through to the Clerk middleware that the agents router applies
+// to every /agents/* request. See src/api/ingestion.ts and the routing tests.
+api.route("/agents", createIngestionApi());
 
 api.route("/agents", createAgentsApi());
 
