@@ -10,6 +10,7 @@ import { attachLocalUser, clerkAuth, requireAuth } from "./auth";
 import { createBotApi } from "./bot";
 import { createIngestionApi } from "./ingestion";
 import { createLeagueMilestoneTypesApi } from "./league-milestone-types";
+import { createModerationApi } from "./moderation";
 
 export const api = new Hono<{ Bindings: CloudflareBindings }>().basePath(
   "/api",
@@ -69,3 +70,5 @@ api.route("/bot", createBotApi());
 api.route("/admin", createAdminApi());
 
 api.route("/leagues", createLeagueMilestoneTypesApi());
+
+api.route("/moderation", createModerationApi());
