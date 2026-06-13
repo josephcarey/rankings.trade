@@ -156,3 +156,62 @@ these as fixed inputs. The single source of truth in code is `src/lib/ratings/co
   one after a crash. The trigger therefore refuses (throws) to apply a round while an earlier
   ranked round in the same season is still unapplied (`hasEarlierUnappliedRankedRound`); since
   the pending-trigger sweep runs in id order, it heals the ordering on its next pass.
+
+---
+
+# Epic I — Universe seasons, titles & ranks (design lock)
+
+Implemented for Epic I, building on DEC-2 (title ladder lives in a config file) and DEC-3
+(default unranked gap = 0). The concrete title thresholds, percentile bands, gates, and the
+established-rating floor were left open by DEC-2; they are locked here. The single source of
+truth in code is `src/lib/titles/config.ts` (`TITLE_CONFIG`) — recalibrate after season 1.
+
+## DEC-I1 — Title ladder: concrete tiers, bands, gates & established floor
+
+- **Ladder (bottom → top), per the brief and confirmed:** Cadet → Ensign → Lieutenant →
+  Commander → Captain → Commodore → Colonel → Admiral → Fleet Admiral.
+- **Lower six tiers are fixed lower-rating thresholds** (Glicko-1 scale): Cadet 0, Ensign 1350,
+  Lieutenant 1450, Commander 1550, Captain 1650, Commodore 1750.
+- **Top three tiers are elite = percentile band + absolute min-rating gate:** Colonel
+  (top, percentile ≥ 0.75, gate 1850), Admiral (≥ 0.90, gate 2000), Fleet Admiral (≥ 0.98,
+  gate 2200). Percentile is the fraction of the **established, ranked** population rated
+  STRICTLY BELOW the agent, so ties share a percentile (and tier) and the bands expand/contract
+  with the field. A consequence of these bands: Fleet Admiral first becomes reachable at ~50
+  established players, Admiral at ~10, Colonel at ~4 — and the gate keeps elite slots empty in
+  a weak field regardless of size.
+- **Established-rating floor (all tiers):** RD ≤ 100 **and** ≥ 3 ranked rounds participated in
+  the season. An agent below the floor receives **no title** (null) and is excluded from the
+  percentile population.
+- Titles are a pure derivation of the live, season-scoped ratings (`src/lib/titles/compute.ts`),
+  recomputed on demand and archived per season at close. No per-round title churn table.
+
+## DEC-I2 — Season close & the per-season baseline reset
+
+- A season closes at the **first universe reset on/after its `cutoff_date`** (the finalizing
+  round that triggers it is the season's last ranked round; its ratings are folded in before
+  the archive). Close archives every rated agent's final rating/RD/volatility, competition
+  rank, title, established flag, and ranked-round count into `season_standings`.
+- **The "reset all Universe ratings to baseline" is structural, not destructive.** Ratings are
+  keyed by `(agent_id, season_id)`; the next season's first ranked round resolves to a NEW
+  `season_id` whose ratings start empty = baseline (1500/350/0.06). The closed season's rating
+  rows are retained as history. Consumers of "current" ratings MUST scope by the open season's
+  id (`getOpenSeason`); during an unranked gap or with no open season there is no current
+  ranked rating.
+- **Idempotency:** the close trigger archives via a deterministic UPSERT (a replay after a
+  partial crash repairs the archive) and stamps the season closed LAST via a single-winner
+  conditional update (`closed_at IS NULL`), mirroring Epic G/H markers. The trigger has no
+  external side effects, so the recovery sweep may safely re-enter it.
+
+## DEC-I3 — Unranked gap representation
+
+- `seasons.unranked_gap_days` is the admin-set warm-up that applies AFTER this season closes
+  (DEC-3 default 0). At close, `unranked_until` is set to the closing reset_date + gap days
+  (date-only) when the gap is positive, else NULL. A finalized round whose reset_date is
+  strictly between the closing reset and `unranked_until` is tagged unranked.
+
+## DEC-I4 — Title tiers live in a config module (not a DB table)
+
+- The brief hinted at a `title_tiers` config table (and reserved migration 0014), but DEC-2
+  locks "ladder, thresholds, bands, and floor live in a single easy-to-edit config file." For
+  consistency with Epic H's `GLICKO2_CONFIG`, the ladder lives in `src/lib/titles/config.ts`.
+  Migrations 0012 (`seasons`) and 0013 (`season_standings`) are used; 0014 is left unused.
