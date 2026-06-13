@@ -276,7 +276,12 @@ describe("rounds db helpers", () => {
 
       const rows = await getSnapshotRowsAt(db, "2026-06-01", "2026-06-12T15:00");
       expect(rows.map((r) => r.agent_symbol)).toEqual(["ALPHA", "BRAVO"]);
-      expect(rows[0]).toEqual({ agent_symbol: "ALPHA", credits: 500, credit_rank: 1 });
+      expect(rows[0]).toEqual({
+        agent_symbol: "ALPHA",
+        agent_id: null,
+        credits: 500,
+        credit_rank: 1,
+      });
     });
 
     it("returns null max for a reset with no snapshots", async () => {

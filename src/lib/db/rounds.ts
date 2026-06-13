@@ -72,6 +72,7 @@ export type FinalizationInputs = {
 /** One agent's snapshot row at a single observation, used to build standings. */
 export type FinalSnapshotRow = {
   agent_symbol: string;
+  agent_id: number | null;
   credits: number | null;
   credit_rank: number | null;
 };
@@ -379,7 +380,11 @@ export async function getFirstObservedAt(
   return row?.observed_at ?? null;
 }
 
-/** Every agent's snapshot row at one observation of a round — the final standings source. */
+/**
+ * Every agent's snapshot row at one observation of a round — the final standings
+ * source. Left-joins `agents` so a registered participant carries its `agent_id`
+ * (Epic H rates registered agents only); scraped-but-unregistered agents get NULL.
+ */
 export async function getSnapshotRowsAt(
   db: D1Database,
   resetDate: string,
@@ -387,10 +392,12 @@ export async function getSnapshotRowsAt(
 ): Promise<FinalSnapshotRow[]> {
   const { results } = await db
     .prepare(
-      `SELECT agent_symbol, credits, credit_rank
-       FROM snapshots
-       WHERE reset_date = ? AND observed_at = ?
-       ORDER BY credit_rank ASC, agent_symbol ASC`,
+      `SELECT s.agent_symbol AS agent_symbol, a.id AS agent_id,
+              s.credits AS credits, s.credit_rank AS credit_rank
+       FROM snapshots s
+       LEFT JOIN agents a ON a.symbol = s.agent_symbol
+       WHERE s.reset_date = ? AND s.observed_at = ?
+       ORDER BY s.credit_rank ASC, s.agent_symbol ASC`,
     )
     .bind(resetDate, observedAt)
     .all<FinalSnapshotRow>();
