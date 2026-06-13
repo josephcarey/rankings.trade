@@ -22,46 +22,49 @@
     <p class="form-message" role="status">{$message}</p>
   {/if}
 
-  <form method="POST" use:enhance class="league-form flow">
-    <div class="field">
-      <label for="name">League name</label>
-      <input
-        id="name"
-        name="name"
-        type="text"
-        autocomplete="off"
-        placeholder="My league"
-        aria-invalid={$errors.name ? "true" : undefined}
-        aria-describedby={$errors.name ? "name-error" : undefined}
-        bind:value={$form.name}
-      />
-      {#if $errors.name}
-        <p id="name-error" class="field-error">{$errors.name}</p>
-      {/if}
-    </div>
+  <form method="POST" use:enhance class="league-form flow" aria-busy={$submitting}>
+    <fieldset class="flow">
+      <legend>New league</legend>
+      <div class="field">
+        <label for="name">League name</label>
+        <input
+          id="name"
+          name="name"
+          type="text"
+          autocomplete="off"
+          placeholder="My league"
+          aria-invalid={$errors.name ? "true" : undefined}
+          aria-describedby={$errors.name ? "name-error" : undefined}
+          bind:value={$form.name}
+        />
+        {#if $errors.name}
+          <p id="name-error" class="field-error">{$errors.name}</p>
+        {/if}
+      </div>
 
-    <div class="field">
-      <label for="description">Description <span class="optional">(optional)</span></label>
-      <textarea
-        id="description"
-        name="description"
-        rows="2"
-        placeholder="What's this league about?"
-        aria-invalid={$errors.description ? "true" : undefined}
-        bind:value={$form.description}
-      ></textarea>
-      {#if $errors.description}
-        <p class="field-error">{$errors.description}</p>
-      {/if}
-    </div>
+      <div class="field">
+        <label for="description">Description <span class="optional">(optional)</span></label>
+        <textarea
+          id="description"
+          name="description"
+          rows="2"
+          placeholder="What's this league about?"
+          aria-invalid={$errors.description ? "true" : undefined}
+          bind:value={$form.description}
+        ></textarea>
+        {#if $errors.description}
+          <p class="field-error">{$errors.description}</p>
+        {/if}
+      </div>
 
-    <div class="field">
-      <label for="visibility">Visibility</label>
-      <select id="visibility" name="visibility" bind:value={$form.visibility}>
-        <option value="private">Private</option>
-        <option value="public">Public</option>
-      </select>
-    </div>
+      <div class="field">
+        <label for="visibility">Visibility</label>
+        <select id="visibility" name="visibility" bind:value={$form.visibility}>
+          <option value="private">Private</option>
+          <option value="public">Public</option>
+        </select>
+      </div>
+    </fieldset>
 
     <button type="submit" class="submit-button" disabled={$submitting}>
       {$submitting ? "Creating…" : "Create league"}
@@ -76,7 +79,9 @@
         <li class="league-row">
           <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- dynamic league route -->
           <a class="league-name" href="/leagues/{league.id}">{league.name}</a>
-          <span class="badge badge-{league.visibility}">{league.visibility}</span>
+          <span class="badge {league.visibility === 'public' ? 'badge-accent' : 'badge-muted'}">
+            {league.visibility}
+          </span>
         </li>
       {/each}
     </ul>
@@ -96,6 +101,18 @@
 
   .lede {
     color: var(--color-text-muted);
+  }
+
+  fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  legend {
+    font-weight: var(--font-weight-7);
+    padding: 0;
+    margin-block-end: var(--size-2);
   }
 
   .field {
@@ -145,10 +162,6 @@
     cursor: progress;
   }
 
-  .empty {
-    color: var(--color-text-muted);
-  }
-
   .league-list {
     list-style: none;
     padding: 0;
@@ -169,23 +182,5 @@
 
   .league-name {
     font-weight: var(--font-weight-7);
-  }
-
-  .badge {
-    font-size: var(--font-size-0);
-    font-weight: var(--font-weight-7);
-    padding: var(--size-1) var(--size-2);
-    border-radius: var(--radius-1);
-    text-transform: capitalize;
-  }
-
-  .badge-private {
-    background: var(--color-surface);
-    color: var(--color-text-muted);
-  }
-
-  .badge-public {
-    background: var(--color-link);
-    color: var(--color-background);
   }
 </style>

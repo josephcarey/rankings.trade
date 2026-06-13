@@ -24,14 +24,6 @@
     padding-block: var(--size-8);
   }
 
-  .eyebrow {
-    color: var(--color-accent);
-    font-size: var(--font-size-0);
-    font-weight: var(--font-weight-7);
-    letter-spacing: var(--font-letterspacing-3);
-    text-transform: uppercase;
-  }
-
   h1 {
     font-size: var(--font-size-fluid-3);
     line-height: var(--font-lineheight-0);

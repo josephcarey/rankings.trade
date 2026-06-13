@@ -2,7 +2,7 @@
   import { enhance as formEnhance } from "$app/forms";
   import { superForm } from "sveltekit-superforms";
 
-  import CreditsChart from "../../../lib/components/credits-chart.svelte";
+  import LineChart from "../../../lib/components/line-chart.svelte";
 
   let { data, form: action } = $props();
 
@@ -36,7 +36,9 @@
 
   <header class="league-header">
     <h1>{data.league.name}</h1>
-    <span class="badge badge-{data.league.visibility}">{data.league.visibility}</span>
+    <span class="badge {data.league.visibility === 'public' ? 'badge-accent' : 'badge-muted'}">
+      {data.league.visibility}
+    </span>
   </header>
 
   {#if data.league.description}
@@ -52,7 +54,7 @@
         <p class="muted">Latest finalized round: {data.standingsRound}</p>
       {/if}
       <div class="table-scroll">
-        <table>
+        <table class="data-table">
           <thead>
             <tr>
               <th scope="col" class="num">#</th>
@@ -81,7 +83,12 @@
 
   <section class="graph flow">
     <h2>Credits over time</h2>
-    <CreditsChart chart={data.chart} caption="Participant credits over time" />
+    <LineChart
+      chart={data.chart}
+      caption="Participant credits over time"
+      emptyText="No credits history yet."
+      legend
+    />
   </section>
 
   <section class="activity flow">
@@ -97,12 +104,12 @@
               {#if item.kind === "milestone"}
                 <span class="feed-label">{item.label}</span>
                 {#if item.recognized}
-                  <span class="badge badge-recognized">Recognized</span>
+                  <span class="badge badge-accent">Recognized</span>
                 {:else}
-                  <span class="badge badge-generic">Generic</span>
+                  <span class="badge badge-muted">Generic</span>
                 {/if}
               {:else}
-                <span class="badge badge-log">Log</span>
+                <span class="badge badge-muted">Log</span>
               {/if}
               <time class="muted">{item.ts}</time>
             </div>
@@ -154,7 +161,7 @@
           <li class="participant-row">
             <span class="participant-symbol">{participant.symbol}</span>
             {#if participant.owner_user_id === null}
-              <span class="badge badge-unclaimed">Unclaimed</span>
+              <span class="badge badge-muted">Unclaimed</span>
             {/if}
             {#if data.canManage}
               <form method="POST" action="?/removeParticipant" use:formEnhance>
@@ -176,42 +183,51 @@
         <p class="form-message" role="status">{$message}</p>
       {/if}
 
-      <form method="POST" action="?/update" use:enhance class="manage-form flow">
-        <div class="field">
-          <label for="name">Name</label>
-          <input
-            id="name"
-            name="name"
-            type="text"
-            autocomplete="off"
-            aria-invalid={$errors.name ? "true" : undefined}
-            bind:value={$form.name}
-          />
-          {#if $errors.name}
-            <p class="field-error">{$errors.name}</p>
-          {/if}
-        </div>
+      <form
+        method="POST"
+        action="?/update"
+        use:enhance
+        class="manage-form flow"
+        aria-busy={$submitting}
+      >
+        <fieldset class="flow">
+          <legend>League details</legend>
+          <div class="field">
+            <label for="name">Name</label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              autocomplete="off"
+              aria-invalid={$errors.name ? "true" : undefined}
+              bind:value={$form.name}
+            />
+            {#if $errors.name}
+              <p class="field-error">{$errors.name}</p>
+            {/if}
+          </div>
 
-        <div class="field">
-          <label for="description">Description</label>
-          <textarea
-            id="description"
-            name="description"
-            rows="2"
-            bind:value={$form.description}
-          ></textarea>
-          {#if $errors.description}
-            <p class="field-error">{$errors.description}</p>
-          {/if}
-        </div>
+          <div class="field">
+            <label for="description">Description</label>
+            <textarea
+              id="description"
+              name="description"
+              rows="2"
+              bind:value={$form.description}
+            ></textarea>
+            {#if $errors.description}
+              <p class="field-error">{$errors.description}</p>
+            {/if}
+          </div>
 
-        <div class="field">
-          <label for="visibility">Visibility</label>
-          <select id="visibility" name="visibility" bind:value={$form.visibility}>
-            <option value="private">Private</option>
-            <option value="public">Public</option>
-          </select>
-        </div>
+          <div class="field">
+            <label for="visibility">Visibility</label>
+            <select id="visibility" name="visibility" bind:value={$form.visibility}>
+              <option value="private">Private</option>
+              <option value="public">Public</option>
+            </select>
+          </div>
+        </fieldset>
 
         <button type="submit" class="submit-button" disabled={$submitting}>
           {$submitting ? "Saving…" : "Save changes"}
@@ -296,34 +312,7 @@
   }
 
   .muted {
-    color: var(--color-text-muted);
     font-size: var(--font-size-0);
-  }
-
-  .table-scroll {
-    overflow-x: auto;
-  }
-
-  table {
-    inline-size: 100%;
-    border-collapse: collapse;
-  }
-
-  th,
-  td {
-    text-align: start;
-    padding: var(--size-2) var(--size-3);
-    border-block-end: var(--border-size-1) solid var(--color-surface);
-  }
-
-  .num {
-    text-align: end;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .callsign {
-    font-family: var(--font-mono, monospace);
-    font-weight: var(--font-weight-7);
   }
 
   tr.inactive {
@@ -379,17 +368,6 @@
     overflow-wrap: anywhere;
   }
 
-  .badge-recognized {
-    background: var(--color-link);
-    color: var(--color-background);
-  }
-
-  .badge-generic,
-  .badge-log {
-    background: var(--color-surface);
-    color: var(--color-text-muted);
-  }
-
   .participants {
     margin-block-start: var(--size-6);
   }
@@ -437,13 +415,15 @@
     cursor: pointer;
   }
 
-  .empty {
-    color: var(--color-text-muted);
+  fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
   }
 
-  .badge-unclaimed {
-    background: var(--color-surface);
-    color: var(--color-text-muted);
+  legend {
+    font-weight: var(--font-weight-7);
+    padding: 0;
   }
 
   .manage {
@@ -556,23 +536,5 @@
   .submit-button:disabled {
     opacity: 0.6;
     cursor: progress;
-  }
-
-  .badge {
-    font-size: var(--font-size-0);
-    font-weight: var(--font-weight-7);
-    padding: var(--size-1) var(--size-2);
-    border-radius: var(--radius-1);
-    text-transform: capitalize;
-  }
-
-  .badge-private {
-    background: var(--color-surface);
-    color: var(--color-text-muted);
-  }
-
-  .badge-public {
-    background: var(--color-link);
-    color: var(--color-background);
   }
 </style>

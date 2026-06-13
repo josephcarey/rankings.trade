@@ -22,8 +22,9 @@
     <p class="form-message" role="status">{$message}</p>
   {/if}
 
-  <form method="POST" use:enhance class="claim-form">
-    <div class="field">
+  <form method="POST" use:enhance class="claim-form" aria-busy={$submitting}>
+    <fieldset class="field">
+      <legend>Claim an agent</legend>
       <label for="symbol">Callsign</label>
       <div class="field-row">
         <input
@@ -31,6 +32,7 @@
           name="symbol"
           type="text"
           autocomplete="off"
+          autocapitalize="characters"
           spellcheck="false"
           placeholder="RANKBOT"
           aria-invalid={$errors.symbol ? "true" : undefined}
@@ -44,7 +46,7 @@
       {#if $errors.symbol}
         <p id="symbol-error" class="field-error">{$errors.symbol}</p>
       {/if}
-    </div>
+    </fieldset>
   </form>
 
   {#if data.agents.length === 0}
@@ -56,9 +58,9 @@
           <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static authed route -->
           <a class="agent-symbol" href="/agents/{agent.symbol}">{agent.symbol}</a>
           {#if agent.verified === 0}
-            <span class="badge badge-unverified">Unverified</span>
+            <span class="badge badge-muted">Unverified</span>
           {:else}
-            <span class="badge badge-verified">Verified</span>
+            <span class="badge badge-accent">Verified</span>
           {/if}
         </li>
       {/each}
@@ -85,6 +87,15 @@
     display: flex;
     flex-direction: column;
     gap: var(--size-2);
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  legend {
+    font-weight: var(--font-weight-7);
+    padding: 0;
+    margin-block-end: var(--size-2);
   }
 
   .field-row {
@@ -128,10 +139,6 @@
     cursor: progress;
   }
 
-  .empty {
-    color: var(--color-text-muted);
-  }
-
   .agent-list {
     list-style: none;
     padding: 0;
@@ -153,22 +160,5 @@
   .agent-symbol {
     font-weight: var(--font-weight-7);
     font-family: var(--font-mono, monospace);
-  }
-
-  .badge {
-    font-size: var(--font-size-0);
-    font-weight: var(--font-weight-7);
-    padding: var(--size-1) var(--size-2);
-    border-radius: var(--radius-1);
-  }
-
-  .badge-unverified {
-    background: var(--color-surface);
-    color: var(--color-text-muted);
-  }
-
-  .badge-verified {
-    background: var(--color-link);
-    color: var(--color-background);
   }
 </style>

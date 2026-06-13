@@ -2,6 +2,8 @@
 @import "open-props/colors";
 @import "open-props/sizes";
 @import "open-props/fonts";
+@import "./composition.css";
+@import "./utilities.css";
 
 :root {
   color-scheme: light;
@@ -41,6 +43,21 @@ html {
 body {
   margin: 0;
   padding: 0;
+}
+
+/* Inherit type by default; keep form controls >= 16px so iOS Safari does not
+   auto-zoom on focus (§4.4). */
+input,
+textarea,
+select,
+button {
+  font: inherit;
+}
+
+input,
+textarea,
+select {
+  font-size: 1rem;
 }
 
 /* Focus styles */
@@ -115,5 +132,3 @@ a:hover {
   margin-inline: 0;
   padding-inline-start: var(--size-3);
 }
-
-

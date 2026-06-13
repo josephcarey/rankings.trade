@@ -1,0 +1,27 @@
+/* Composition layer (CUBE) — layout primitives shared across routes. */
+
+/* Horizontal-scroll container for wide data tables on small screens (§4.1). */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Shared data-table block — promoted from per-page copies (§1.2 / §3.1). */
+.data-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  /* Keeps columns legible on phones; the .table-scroll wrapper scrolls. */
+  min-inline-size: 30rem;
+}
+
+.data-table th,
+.data-table td {
+  text-align: start;
+  padding: var(--size-2) var(--size-3);
+  border-block-end: var(--border-size-1) solid var(--color-surface);
+}
+
+.data-table .num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
