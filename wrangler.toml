@@ -8,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 # server handler reads this from $env/dynamic/public at runtime, so it must exist as a
 # Worker runtime var — not only as a build-time var — or SSR 500s with "Publishable key
 # is missing". Safe to commit: publishable keys are public by design.
-PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_c3VwZXJiLWJvYS01Ni5jbGVyay5hY2NvdW50cy5kZXYk"
+PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsucmFua2luZ3MudHJhZGUk"
 
 [assets]
 directory = ".svelte-kit/cloudflare"
