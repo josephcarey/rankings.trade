@@ -18,20 +18,9 @@ import type { TitleConfig } from "../titles/config";
 
 import { listSeasonRatings } from "../db/ratings";
 import { countRankedRoundsByAgent } from "../db/seasons";
+import { rankByRatingDesc } from "../ratings/rank";
 import { computeTitles } from "../titles/compute";
 import { TITLE_CONFIG } from "../titles/config";
-
-/**
- * Standard competition ranking ("1224") for ratings sorted descending: equal ratings share a
- * rank and the next rank skips accordingly.
- */
-function competitionRanks(sortedDesc: readonly number[]): number[] {
-  const ranks: number[] = [];
-  for (const [i, value] of sortedDesc.entries()) {
-    ranks.push(i > 0 && value === sortedDesc[i - 1] ? ranks[i - 1]! : i + 1);
-  }
-  return ranks;
-}
 
 /**
  * Build the final-standing rows for a season from its current ratings.
@@ -59,13 +48,17 @@ export async function computeSeasonStandings(
     computeTitles(titleInputs, config).map((t) => [t.agentId, t]),
   );
 
-  // Rank by rating desc; ties broken by agent_id for a deterministic order before ranking.
+  // Competition rank over ALL rated agents by rating desc (shared with the per-round rating
+  // history, Epic O, so a leaderboard rank and a history rank for the same round agree). Ties
+  // broken by agent_id for a deterministic output order.
+  const ranks = rankByRatingDesc(
+    ratings.map((r) => ({ agentId: r.agent_id, rating: r.rating })),
+  );
   const sorted = [...ratings].toSorted(
     (a, b) => b.rating - a.rating || a.agent_id - b.agent_id,
   );
-  const ranks = competitionRanks(sorted.map((r) => r.rating));
 
-  return sorted.map((r, i) => {
+  return sorted.map((r) => {
     const title = titles.get(r.agent_id);
     return {
       season_id: seasonId,
@@ -73,7 +66,7 @@ export async function computeSeasonStandings(
       final_rating: r.rating,
       final_rd: r.rd,
       final_volatility: r.volatility,
-      final_rank: ranks[i]!,
+      final_rank: ranks.get(r.agent_id)!,
       title: title?.title ?? null,
       established: title?.established ?? false,
       ranked_rounds: rankedRounds.get(r.agent_id) ?? 0,

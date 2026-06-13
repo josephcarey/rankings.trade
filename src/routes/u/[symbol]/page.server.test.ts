@@ -169,6 +169,61 @@ describe("public profile page server load", () => {
     expect(result.chart.hasData).toBe(true);
   });
 
+  it("builds the rating-over-time chart and the rank/rating delta from history", async () => {
+    const seasonId = await openSeason(db);
+    const agentId = await insertAgent(db, "ALFA", 1);
+    await insertRating(db, agentId, seasonId, 1550);
+
+    const r1 = await db
+      .prepare(
+        `INSERT INTO rounds (reset_date, season_id, is_ranked, finalized_at)
+         VALUES ('2026-06-01', ?, 1, '2026-06-01T00:00:00Z') RETURNING id`,
+      )
+      .bind(seasonId)
+      .first<{ id: number }>();
+    const r2 = await db
+      .prepare(
+        `INSERT INTO rounds (reset_date, season_id, is_ranked, finalized_at)
+         VALUES ('2026-06-08', ?, 1, '2026-06-08T00:00:00Z') RETURNING id`,
+      )
+      .bind(seasonId)
+      .first<{ id: number }>();
+    await db
+      .prepare(
+        `INSERT INTO rating_history (agent_id, season_id, round_id, rating, rd, rank)
+         VALUES (?, ?, ?, 1500, 60, 3)`,
+      )
+      .bind(agentId, seasonId, r1!.id)
+      .run();
+    await db
+      .prepare(
+        `INSERT INTO rating_history (agent_id, season_id, round_id, rating, rd, rank)
+         VALUES (?, ?, ?, 1550, 50, 1)`,
+      )
+      .bind(agentId, seasonId, r2!.id)
+      .run();
+
+    const result = (await invoke(db, "ALFA")) as {
+      delta: { rankDelta: number; ratingDelta: number } | null;
+      ratingChart: { hasData: boolean };
+    };
+    expect(result.ratingChart.hasData).toBe(true);
+    expect(result.delta).toEqual({ ratingDelta: 50, rankDelta: 2 });
+  });
+
+  it("has no rating chart data and a null delta when there is no history", async () => {
+    const seasonId = await openSeason(db);
+    const agentId = await insertAgent(db, "ALFA", 1);
+    await insertRating(db, agentId, seasonId, 1550);
+
+    const result = (await invoke(db, "ALFA")) as {
+      delta: unknown;
+      ratingChart: { hasData: boolean };
+    };
+    expect(result.ratingChart.hasData).toBe(false);
+    expect(result.delta).toBeNull();
+  });
+
   it("shows no current standing when no season is open, but still lists archived history", async () => {
     const agentId = await insertAgent(db, "ALFA", 1);
     await insertClosedSeasonHistory(db, agentId);

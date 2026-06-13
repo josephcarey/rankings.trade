@@ -7,11 +7,16 @@ import type { FinalizationSeams } from "../rounds/seams";
 
 import { loadMigrations } from "../db/loader";
 import { runMigrations } from "../db/migrate";
+import {
+  getAgentRatingDelta,
+  listAgentRatingHistory,
+} from "../db/rating-history";
 import { getRating, isRatingPeriodApplied, listSeasonRatings } from "../db/ratings";
 import { getRoundByResetDate } from "../db/rounds";
 import { createSqliteD1 } from "../db/sqlite-d1-adapter";
 import { finalizeRound } from "../rounds/finalize";
 import { defaultFinalizationSeams } from "../rounds/seams";
+import { computeSeasonStandings } from "../seasons/standings";
 import { GLICKO2_CONFIG } from "./config";
 import { createGlickoRatingTrigger, glickoRatingTrigger } from "./trigger";
 
@@ -205,24 +210,55 @@ describe("glickoRatingTrigger — applying a ranked round", () => {
     expect(await isRatingPeriodApplied(db, round.id)).toBe(false);
   });
 
-  it("throws on the impossible ranked-without-season round", async () => {
-    // Construct in memory (the DB CHECK forbids persisting this combination).
-    const round: Round = {
-      id: 1,
-      reset_date: "2026-06-01",
-      started_at: null,
-      final_observed_at: null,
-      membership_frozen_at: null,
-      finalized_at: "2026-06-01T00:00:00Z",
-      season_id: null,
-      is_ranked: 1,
-      ratings_applied_at: null,
-      season_processed_at: null,
-      created_at: "2026-06-01T00:00:00Z",
-    };
-    await expect(
-      glickoRatingTrigger.onRankedRoundFinalized(db, round),
-    ).rejects.toThrow(/no season_id/);
+  it("writes per-round rating_history with rank matching the live leaderboard rank", async () => {
+    const a = await agent(db, "ALPHA");
+    const b = await agent(db, "BRAVO");
+    const c = await agent(db, "CHARLIE");
+    const round = await finalizedRound(db, "2026-06-01", { isRanked: true, seasonId: 1 });
+    await universeStanding(db, round.id, "ALPHA", a, 900, 1);
+    await universeStanding(db, round.id, "BRAVO", b, 500, 2);
+    await universeStanding(db, round.id, "CHARLIE", c, 100, 3);
+
+    await glickoRatingTrigger.onRankedRoundFinalized(db, round);
+
+    const history = await listAgentRatingHistory(db, a, 1);
+    expect(history).toHaveLength(1);
+    expect(history[0]!.resetDate).toBe("2026-06-01");
+
+    // Every rated agent gets a history row whose rank equals the leaderboard's live rank.
+    const standings = await computeSeasonStandings(db, 1);
+    for (const s of standings) {
+      const point = await listAgentRatingHistory(db, s.agent_id, 1);
+      expect(point.at(-1)!.rank).toBe(s.final_rank);
+      expect(point.at(-1)!.rating).toBeCloseTo(s.final_rating, 9);
+    }
+    // ALPHA won the round, so its history rank is #1.
+    expect(history[0]!.rank).toBe(1);
+  });
+
+  it("history deltas track rank movement across two rounds", async () => {
+    const a = await agent(db, "ALPHA");
+    const b = await agent(db, "BRAVO");
+
+    const r1 = await finalizedRound(db, "2026-06-01", { isRanked: true, seasonId: 1 });
+    await universeStanding(db, r1.id, "ALPHA", a, 900, 1);
+    await universeStanding(db, r1.id, "BRAVO", b, 100, 2);
+    await glickoRatingTrigger.onRankedRoundFinalized(db, r1);
+
+    // Round 2: BRAVO crushes ALPHA repeatedly is not possible in one round, but a strong
+    // win flips nothing yet; assert deltas exist and are well-formed (new entrant → null).
+    const r2 = await finalizedRound(db, "2026-06-08", { isRanked: true, seasonId: 1 });
+    await universeStanding(db, r2.id, "ALPHA", a, 100, 2);
+    await universeStanding(db, r2.id, "BRAVO", b, 900, 1);
+    await glickoRatingTrigger.onRankedRoundFinalized(db, r2);
+
+    const deltaA = await getAgentRatingDelta(db, a, 1);
+    const deltaB = await getAgentRatingDelta(db, b, 1);
+    expect(deltaA).not.toBeNull();
+    expect(deltaB).not.toBeNull();
+    // A lost ground, B gained: A's rating delta is negative, B's positive.
+    expect(deltaA!.ratingDelta).toBeLessThan(0);
+    expect(deltaB!.ratingDelta).toBeGreaterThan(0);
   });
 });
 

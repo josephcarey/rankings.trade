@@ -3,6 +3,7 @@ import type { PageServerLoad } from "./$types";
 import { buildLineChart } from "../../lib/charts/line-chart";
 import { listUniverseCreditsSeries } from "../../lib/db/credits";
 import { buildLeaderboard } from "../../lib/db/leaderboard";
+import { listSeasonRoundDeltas } from "../../lib/db/rating-history";
 import { getOpenSeason } from "../../lib/db/seasons";
 
 /** How many top-ranked agents the credits graph plots. */
@@ -25,6 +26,11 @@ export const load: PageServerLoad = async ({ platform }) => {
   if (!season) return { chart: null, rows: [], season: null };
 
   const rows = await buildLeaderboard(db, season.id);
+  const deltas = await listSeasonRoundDeltas(db, season.id);
+  const rowsWithDelta = rows.map((row) => ({
+    ...row,
+    rankDelta: deltas.get(row.agentId)?.rankDelta ?? null,
+  }));
   const topIds = rows.slice(0, GRAPH_TOP_N).map((row) => row.agentId);
   const series = await listUniverseCreditsSeries(db, season.id, topIds);
 
@@ -37,5 +43,5 @@ export const load: PageServerLoad = async ({ platform }) => {
     })),
   );
 
-  return { chart, rows, season: { label: season.label } };
+  return { chart, rows: rowsWithDelta, season: { label: season.label } };
 };

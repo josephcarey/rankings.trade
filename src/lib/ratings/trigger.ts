@@ -31,10 +31,12 @@ import {
   hasEarlierUnappliedRankedRound,
   isRatingPeriodApplied,
   listSeasonRatings,
+  type RatingHistoryInsert,
   type RatingUpdate,
 } from "../db/ratings";
 import { listRateableUniverseStandings } from "../db/rounds";
 import { baselineState, GLICKO2_CONFIG } from "./config";
+import { rankByRatingDesc } from "./rank";
 import { computeRatingPeriod } from "./rating-period";
 
 /** Configurable Glicko-2 rating trigger; production uses {@link glickoRatingTrigger}. */
@@ -100,7 +102,26 @@ export function createGlickoRatingTrigger(
         volatility: r.state.volatility,
       }));
 
-      await applyRatingPeriod(db, { roundId: round.id, seasonId, updates });
+      // `results` is the FULL post-period season population (participants ∪ idle), so it
+      // equals what the leaderboard ranks. Rank over it with the SHARED competition-ranking
+      // helper (Epic I uses the same one) so each agent's stored history rank for this round
+      // is identical to its live leaderboard rank — what makes the rank deltas exact.
+      const ranks = rankByRatingDesc(
+        results.map((r) => ({ agentId: r.agentId, rating: r.state.rating })),
+      );
+      const history: RatingHistoryInsert[] = results.map((r) => ({
+        agentId: r.agentId,
+        rating: r.state.rating,
+        rd: r.state.rd,
+        rank: ranks.get(r.agentId)!,
+      }));
+
+      await applyRatingPeriod(db, {
+        roundId: round.id,
+        seasonId,
+        updates,
+        history,
+      });
     },
   };
 }

@@ -10,6 +10,10 @@ import { listActiveLeaguesForAgent } from "../../../lib/db/leagues";
 import { listLogsByAgent } from "../../../lib/db/logs";
 import { recognizedTypesForAgent } from "../../../lib/db/milestone-types";
 import { listMilestonesByAgent } from "../../../lib/db/milestones";
+import {
+  getAgentRatingDelta,
+  listAgentRatingHistory,
+} from "../../../lib/db/rating-history";
 import { getOpenSeason, listAgentSeasonHistory } from "../../../lib/db/seasons";
 import { resolveActor } from "../../../lib/leagues/actor";
 import { getViewableLeague } from "../../../lib/leagues/league-service";
@@ -44,6 +48,8 @@ export const load: PageServerLoad = async ({ locals, params, platform }) => {
   const season = await getOpenSeason(db);
   let current = null;
   let chart = buildLineChart([], []);
+  let ratingChart = buildLineChart([], []);
+  let delta = null;
   if (season) {
     const standings = await computeSeasonStandings(db, season.id);
     const row = standings.find((s) => s.agent_id === agent.id);
@@ -53,6 +59,15 @@ export const load: PageServerLoad = async ({ locals, params, platform }) => {
       series.rounds.map((r) => r.reset_date),
       [{ label: agent.symbol, values: series.byAgent.get(agent.id) ?? [] }],
     );
+
+    // Rating-over-time (Epic O): the agent's per-round Glicko-2 line for the open season,
+    // plus the rank/rating delta since the previous ranked round.
+    const ratingPoints = await listAgentRatingHistory(db, agent.id, season.id);
+    ratingChart = buildLineChart(
+      ratingPoints.map((p) => p.resetDate),
+      [{ label: agent.symbol, values: ratingPoints.map((p) => p.rating) }],
+    );
+    delta = await getAgentRatingDelta(db, agent.id, season.id);
   }
 
   // Leagues this agent is in, filtered to what the viewer may see.
@@ -96,10 +111,12 @@ export const load: PageServerLoad = async ({ locals, params, platform }) => {
     canManage: actor !== null && agent.owner_user_id === actor.userId,
     chart,
     current,
+    delta,
     history,
     leagues,
     logs,
     milestones,
+    ratingChart,
     seasonLabel: season?.label ?? null,
   };
 };

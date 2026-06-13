@@ -40,6 +40,18 @@ export type RatingUpdate = {
   volatility: number;
 };
 
+/**
+ * One append-only `rating_history` row for an agent at the end of a rating period (Epic O).
+ * `season_id`/`round_id` are bound by {@link applyRatingPeriod} (not carried here) so history
+ * and the rating UPSERTs can never be written against a mismatched round/season.
+ */
+export type RatingHistoryInsert = {
+  agentId: number;
+  rating: number;
+  rd: number;
+  rank: number;
+};
+
 const UPSERT_RATING_SQL = `
   INSERT INTO ratings (agent_id, season_id, rating, rd, volatility, last_round_id, updated_at)
   VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -51,6 +63,9 @@ const UPSERT_RATING_SQL = `
     updated_at = CURRENT_TIMESTAMP`;
 
 const INSERT_MARKER_SQL = `INSERT INTO rating_periods (round_id, season_id) VALUES (?, ?)`;
+
+/** Column tuple bound, in order, for one `rating_history` row. */
+const HISTORY_COLUMNS = `(agent_id, season_id, round_id, rating, rd, rank)`;
 
 /** Every rating row in a season (the input set for participants + idle non-participants). */
 export async function listSeasonRatings(
@@ -119,28 +134,45 @@ export async function hasEarlierUnappliedRankedRound(
 }
 
 /**
- * Persist one applied rating period: every agent's new state plus the `rating_periods`
- * marker, written in a SINGLE atomic `db.batch()` so a replay (which reruns the whole
- * computation) is an all-or-nothing no-op.
+ * Persist one applied rating period: every agent's new state, an append-only
+ * `rating_history` row per agent (Epic O), and the `rating_periods` marker — ALL written in
+ * a SINGLE atomic `db.batch()` so a replay (which reruns the whole computation) is an
+ * all-or-nothing no-op and history can never disagree with the current rating.
  *
- * The whole period must fit in one D1 batch (≤ {@link D1_MAX_BATCH} statements, marker
- * included) to stay atomic. If a season ever exceeds that, splitting across batches would
- * leave ratings written without the marker — a later replay would then recompute from
- * already-mutated states and double-apply. Rather than corrupt silently, this throws so
- * the failure is loud; a multi-batch-safe apply (e.g. a pre-period snapshot) is the
- * follow-up. At current scale (one league, single-digit agents) this never trips.
+ * The whole period must fit in one D1 batch (≤ {@link D1_MAX_BATCH} statements) to stay
+ * atomic. If a season ever exceeds that, splitting across batches would leave ratings written
+ * without the marker — a later replay would then recompute from already-mutated states and
+ * double-apply. Rather than corrupt silently, this throws so the failure is loud; a
+ * multi-batch-safe apply (e.g. a pre-period snapshot) is the follow-up. The statement count is
+ * the N rating UPSERTs + 1 marker + 1 (a SINGLE multi-row history insert, when history is
+ * supplied), so the ceiling stays at ~{@link D1_MAX_BATCH} agents rather than halving it.
+ *
+ * History rows (when supplied) must describe EXACTLY the same agents as `updates` — same
+ * count, same ids, no duplicates — so the round's current ratings and its history can never
+ * be silently written for different populations. `season_id`/`round_id` are bound here, not
+ * trusted from the caller's rows. Callers that only exercise rating mechanics may omit
+ * `history`; production always supplies it.
  */
 export async function applyRatingPeriod(
   db: D1Database,
-  args: { roundId: number; seasonId: number; updates: readonly RatingUpdate[] },
+  args: {
+    roundId: number;
+    seasonId: number;
+    updates: readonly RatingUpdate[];
+    history?: readonly RatingHistoryInsert[];
+  },
 ): Promise<void> {
-  const { roundId, seasonId, updates } = args;
+  const { roundId, seasonId, updates, history = [] } = args;
 
-  // +1 for the marker insert that must commit atomically with the rating upserts.
-  if (updates.length + 1 > D1_MAX_BATCH) {
+  if (history.length > 0) assertHistoryMatchesUpdates(updates, history);
+
+  // N upserts + (1 multi-row history insert when present) + 1 marker, all atomic.
+  const statementCount = updates.length + (history.length > 0 ? 1 : 0) + 1;
+  if (statementCount > D1_MAX_BATCH) {
     throw new Error(
       `applyRatingPeriod: rating period too large for a single atomic batch ` +
-        `(${updates.length} agents > ${D1_MAX_BATCH - 1}); needs a multi-batch-safe apply`,
+        `(${updates.length} agents ⇒ ${statementCount} statements > ${D1_MAX_BATCH}); ` +
+        `needs a multi-batch-safe apply`,
     );
   }
 
@@ -148,7 +180,54 @@ export async function applyRatingPeriod(
   const statements = updates.map((u) =>
     ratingStmt.bind(u.agentId, seasonId, u.rating, u.rd, u.volatility, roundId),
   );
+
+  if (history.length > 0) {
+    const placeholders = history.map(() => `(?, ?, ?, ?, ?, ?)`).join(", ");
+    const bindings = history.flatMap((h) => [
+      h.agentId,
+      seasonId,
+      roundId,
+      h.rating,
+      h.rd,
+      h.rank,
+    ]);
+    statements.push(
+      db
+        .prepare(`INSERT INTO rating_history ${HISTORY_COLUMNS} VALUES ${placeholders}`)
+        .bind(...bindings),
+    );
+  }
+
   statements.push(db.prepare(INSERT_MARKER_SQL).bind(roundId, seasonId));
 
   await db.batch(statements);
 }
+
+/** Fail loud if history does not describe exactly the same agents as the rating updates. */
+function assertHistoryMatchesUpdates(
+  updates: readonly RatingUpdate[],
+  history: readonly RatingHistoryInsert[],
+): void {
+  const updateIds = new Set(updates.map((u) => u.agentId));
+  const seen = new Set<number>();
+  for (const h of history) {
+    if (!updateIds.has(h.agentId)) {
+      throw new Error(
+        `applyRatingPeriod: history row for agent ${h.agentId} has no matching rating update`,
+      );
+    }
+    if (seen.has(h.agentId)) {
+      throw new Error(
+        `applyRatingPeriod: duplicate history row for agent ${h.agentId}`,
+      );
+    }
+    seen.add(h.agentId);
+  }
+  if (history.length !== updates.length) {
+    throw new Error(
+      `applyRatingPeriod: history covers ${history.length} agents but ${updates.length} ` +
+        `ratings were updated`,
+    );
+  }
+}
+

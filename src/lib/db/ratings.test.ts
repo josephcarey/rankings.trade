@@ -159,6 +159,135 @@ describe("applyRatingPeriod + reads", () => {
     expect(await isRatingPeriodApplied(db, roundId)).toBe(true);
     expect(await listSeasonRatings(db, 1)).toHaveLength(99);
   });
+
+  it("writes a rating_history row per agent in the same atomic batch as the upserts", async () => {
+    const a = await insertAgent(db, "ALPHA");
+    const b = await insertAgent(db, "BRAVO");
+    const roundId = await insertRankedRound(db, "2026-06-01", 1, true);
+
+    await applyRatingPeriod(db, {
+      roundId,
+      seasonId: 1,
+      updates: [
+        { agentId: a, rating: 1520, rd: 200, volatility: 0.06 },
+        { agentId: b, rating: 1480, rd: 200, volatility: 0.06 },
+      ],
+      history: [
+        { agentId: a, rating: 1520, rd: 200, rank: 1 },
+        { agentId: b, rating: 1480, rd: 200, rank: 2 },
+      ],
+    });
+
+    const rows = await db
+      .prepare(
+        `SELECT agent_id, season_id, round_id, rating, rd, rank
+         FROM rating_history ORDER BY rank`,
+      )
+      .all<{
+        agent_id: number;
+        season_id: number;
+        round_id: number;
+        rating: number;
+        rd: number;
+        rank: number;
+      }>();
+    expect(rows.results).toEqual([
+      { agent_id: a, season_id: 1, round_id: roundId, rating: 1520, rd: 200, rank: 1 },
+      { agent_id: b, season_id: 1, round_id: roundId, rating: 1480, rd: 200, rank: 2 },
+    ]);
+  });
+
+  it("history rides the marker's atomicity: a duplicate replay inserts no extra history", async () => {
+    const a = await insertAgent(db, "ALPHA");
+    const roundId = await insertRankedRound(db, "2026-06-01", 1, true);
+    const args = {
+      roundId,
+      seasonId: 1,
+      updates: [{ agentId: a, rating: 1520, rd: 200, volatility: 0.06 }],
+      history: [{ agentId: a, rating: 1520, rd: 200, rank: 1 }],
+    };
+    await applyRatingPeriod(db, args);
+    // A replay fails on the marker PK conflict and rolls the whole batch back.
+    await expect(applyRatingPeriod(db, args)).rejects.toThrow();
+    const count = await db
+      .prepare(`SELECT COUNT(*) AS n FROM rating_history WHERE round_id = ?`)
+      .bind(roundId)
+      .first<{ n: number }>();
+    expect(count?.n).toBe(1);
+  });
+
+  it("fails loud when history does not cover exactly the rated agents", async () => {
+    const a = await insertAgent(db, "ALPHA");
+    const b = await insertAgent(db, "BRAVO");
+    const roundId = await insertRankedRound(db, "2026-06-01", 1, true);
+    await expect(
+      applyRatingPeriod(db, {
+        roundId,
+        seasonId: 1,
+        updates: [
+          { agentId: a, rating: 1520, rd: 200, volatility: 0.06 },
+          { agentId: b, rating: 1480, rd: 200, volatility: 0.06 },
+        ],
+        history: [{ agentId: a, rating: 1520, rd: 200, rank: 1 }],
+      }),
+    ).rejects.toThrow(/history covers 1 agents but 2/);
+    // Nothing committed — not even the marker.
+    expect(await isRatingPeriodApplied(db, roundId)).toBe(false);
+  });
+
+  it("fails loud when a history row has no matching rating update", async () => {
+    const a = await insertAgent(db, "ALPHA");
+    const roundId = await insertRankedRound(db, "2026-06-01", 1, true);
+    await expect(
+      applyRatingPeriod(db, {
+        roundId,
+        seasonId: 1,
+        updates: [{ agentId: a, rating: 1520, rd: 200, volatility: 0.06 }],
+        history: [{ agentId: 999, rating: 1520, rd: 200, rank: 1 }],
+      }),
+    ).rejects.toThrow(/no matching rating update/);
+  });
+
+  it("fails loud (size guard) once history pushes the period past one atomic batch", async () => {
+    const roundId = await insertRankedRound(db, "2026-06-01", 1, true);
+    // 99 upserts + 1 multi-row history insert + 1 marker = 101 statements > 100.
+    const updates = Array.from({ length: 99 }, (_, i) => ({
+      agentId: i + 1,
+      rating: 1500,
+      rd: 350,
+      volatility: 0.06,
+    }));
+    const history = updates.map((u) => ({
+      agentId: u.agentId,
+      rating: u.rating,
+      rd: u.rd,
+      rank: u.agentId,
+    }));
+    await expect(
+      applyRatingPeriod(db, { roundId, seasonId: 1, updates, history }),
+    ).rejects.toThrow(/too large for a single atomic batch/);
+    expect(await isRatingPeriodApplied(db, roundId)).toBe(false);
+  });
+
+  it("applies the largest period with history that still fits one batch (98 agents)", async () => {
+    const roundId = await insertRankedRound(db, "2026-06-01", 1, true);
+    // 98 upserts + 1 history insert + 1 marker = 100 statements.
+    const updates = Array.from({ length: 98 }, (_, i) => ({
+      agentId: i + 1,
+      rating: 1500,
+      rd: 350,
+      volatility: 0.06,
+    }));
+    const history = updates.map((u) => ({
+      agentId: u.agentId,
+      rating: u.rating,
+      rd: u.rd,
+      rank: u.agentId,
+    }));
+    await applyRatingPeriod(db, { roundId, seasonId: 1, updates, history });
+    expect(await isRatingPeriodApplied(db, roundId)).toBe(true);
+    expect(await listSeasonRatings(db, 1)).toHaveLength(98);
+  });
 });
 
 describe("hasEarlierUnappliedRankedRound — chronological barrier", () => {
