@@ -11,11 +11,16 @@ import { loadMigrations } from "../db/loader";
 import { runMigrations } from "../db/migrate";
 import { createSqliteD1 } from "../db/sqlite-d1-adapter";
 import {
+  acceptInvite,
   addParticipant,
   createLeagueForActor,
+  createLeagueInvite,
   getViewableLeague,
+  listLeagueInvites,
   listParticipants,
   removeParticipant,
+  revokeLeagueInvite,
+  rotateLeagueInvite,
   updateLeagueDetails,
 } from "./league-service";
 
@@ -350,5 +355,220 @@ describe("listParticipants", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value).toHaveLength(1);
+  });
+});
+
+/** An actor who owns agents and joins via invite. */
+const JOINER: Actor = { userId: 7, isAdmin: false };
+
+describe("createLeagueInvite", () => {
+  let db: D1Database;
+  beforeEach(async () => {
+    db = await makeDb();
+  });
+
+  it("creates an active invite and returns the one-time token", async () => {
+    const id = await newLeague(db);
+    const result = await createLeagueInvite(db, OWNER, id);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.token.startsWith("rtlnk_")).toBe(true);
+    expect(result.value.invite.revoked_at).toBeNull();
+    expect(result.value.invite.league_id).toBe(id);
+  });
+
+  it("lets an admin create an invite for a league they do not own", async () => {
+    const id = await newLeague(db);
+    const result = await createLeagueInvite(db, ADMIN, id);
+    expect(result.ok).toBe(true);
+  });
+
+  it("hides the league from a non-owner non-admin", async () => {
+    const id = await newLeague(db);
+    expect(await createLeagueInvite(db, STRANGER, id)).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+  });
+});
+
+describe("acceptInvite", () => {
+  let db: D1Database;
+  beforeEach(async () => {
+    db = await makeDb();
+  });
+
+  async function setupInvite(): Promise<{ leagueId: number; token: string }> {
+    const leagueId = await newLeague(db);
+    const created = await createLeagueInvite(db, OWNER, leagueId);
+    if (!created.ok) throw new Error("setup: createLeagueInvite failed");
+    return { leagueId, token: created.value.token };
+  }
+
+  it("joins the actor's own agent to the invite's league", async () => {
+    const { leagueId, token } = await setupInvite();
+    const agentId = await insertAgent(db, "MINE", JOINER.userId);
+    const result = await acceptInvite(db, JOINER, token, agentId);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.leagueId).toBe(leagueId);
+    expect(result.value.symbol).toBe("MINE");
+
+    const roster = await listParticipants(db, OWNER, leagueId);
+    if (!roster.ok) return;
+    expect(roster.value.map((p) => p.symbol)).toEqual(["MINE"]);
+  });
+
+  it("rejects an unknown token", async () => {
+    await setupInvite();
+    const agentId = await insertAgent(db, "MINE", JOINER.userId);
+    expect(await acceptInvite(db, JOINER, "rtlnk_nope", agentId)).toEqual({
+      ok: false,
+      reason: "invalid_invite",
+    });
+  });
+
+  it("rejects a revoked token", async () => {
+    const { leagueId, token } = await setupInvite();
+    const list = await listLeagueInvites(db, OWNER, leagueId);
+    if (!list.ok || !list.value[0]) throw new Error("setup: no invite");
+    await revokeLeagueInvite(db, OWNER, leagueId, list.value[0].id);
+    const agentId = await insertAgent(db, "MINE", JOINER.userId);
+    expect(await acceptInvite(db, JOINER, token, agentId)).toEqual({
+      ok: false,
+      reason: "invalid_invite",
+    });
+  });
+
+  it("rejects an agent the actor does not own", async () => {
+    const { token } = await setupInvite();
+    const agentId = await insertAgent(db, "THEIRS", OWNER.userId);
+    expect(await acceptInvite(db, JOINER, token, agentId)).toEqual({
+      ok: false,
+      reason: "agent_not_owned",
+    });
+  });
+
+  it("rejects an unknown agent id", async () => {
+    const { token } = await setupInvite();
+    expect(await acceptInvite(db, JOINER, token, 9999)).toEqual({
+      ok: false,
+      reason: "agent_not_owned",
+    });
+  });
+
+  it("is idempotent for an already-active agent", async () => {
+    const { leagueId, token } = await setupInvite();
+    const agentId = await insertAgent(db, "MINE", JOINER.userId);
+    await acceptInvite(db, JOINER, token, agentId);
+    await acceptInvite(db, JOINER, token, agentId);
+    const roster = await listParticipants(db, OWNER, leagueId);
+    if (!roster.ok) return;
+    expect(roster.value).toHaveLength(1);
+  });
+
+  it("opens a new interval after the agent previously left", async () => {
+    const { leagueId, token } = await setupInvite();
+    const agentId = await insertAgent(db, "MINE", JOINER.userId);
+    await acceptInvite(db, JOINER, token, agentId);
+    await leaveMember(db, leagueId, agentId);
+
+    const rejoin = await acceptInvite(db, JOINER, token, agentId);
+    expect(rejoin.ok).toBe(true);
+    const roster = await listParticipants(db, OWNER, leagueId);
+    if (!roster.ok) return;
+    expect(roster.value).toHaveLength(1);
+  });
+});
+
+describe("rotateLeagueInvite", () => {
+  let db: D1Database;
+  beforeEach(async () => {
+    db = await makeDb();
+  });
+
+  it("invalidates the old URL and the new one works", async () => {
+    const id = await newLeague(db);
+    const first = await createLeagueInvite(db, OWNER, id);
+    if (!first.ok) throw new Error("setup failed");
+
+    const rotated = await rotateLeagueInvite(db, OWNER, id);
+    expect(rotated.ok).toBe(true);
+    if (!rotated.ok) return;
+
+    const agentId = await insertAgent(db, "MINE", JOINER.userId);
+    expect(await acceptInvite(db, JOINER, first.value.token, agentId)).toEqual({
+      ok: false,
+      reason: "invalid_invite",
+    });
+    const rejoin = await acceptInvite(db, JOINER, rotated.value.token, agentId);
+    expect(rejoin.ok).toBe(true);
+  });
+
+  it("hides the league from a non-owner non-admin", async () => {
+    const id = await newLeague(db);
+    expect(await rotateLeagueInvite(db, STRANGER, id)).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+  });
+});
+
+describe("revokeLeagueInvite", () => {
+  let db: D1Database;
+  beforeEach(async () => {
+    db = await makeDb();
+  });
+
+  it("revokes an invite so it can no longer be accepted", async () => {
+    const id = await newLeague(db);
+    const created = await createLeagueInvite(db, OWNER, id);
+    if (!created.ok) throw new Error("setup failed");
+
+    const result = await revokeLeagueInvite(db, OWNER, id, created.value.invite.id);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.revoked_at).not.toBeNull();
+  });
+
+  it("returns not_found for an invite not in the league", async () => {
+    const id = await newLeague(db);
+    expect(await revokeLeagueInvite(db, OWNER, id, 9999)).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+  });
+
+  it("hides the league from a non-owner non-admin", async () => {
+    const id = await newLeague(db);
+    const created = await createLeagueInvite(db, OWNER, id);
+    if (!created.ok) throw new Error("setup failed");
+    expect(
+      await revokeLeagueInvite(db, STRANGER, id, created.value.invite.id),
+    ).toEqual({ ok: false, reason: "not_found" });
+  });
+});
+
+describe("listLeagueInvites", () => {
+  let db: D1Database;
+  beforeEach(async () => {
+    db = await makeDb();
+  });
+
+  it("lists invites for the owner", async () => {
+    const id = await newLeague(db);
+    await createLeagueInvite(db, OWNER, id);
+    const result = await listLeagueInvites(db, OWNER, id);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value).toHaveLength(1);
+  });
+
+  it("hides invites from a non-owner non-admin", async () => {
+    const id = await newLeague(db);
+    expect(await listLeagueInvites(db, STRANGER, id)).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
   });
 });

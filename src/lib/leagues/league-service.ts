@@ -18,14 +18,24 @@
  * and passed in as {@link Actor.isAdmin}, keeping this layer free of env coupling.
  */
 
+import type { LeagueInvite } from "../db/league-invites";
 import type { League, LeagueUpdate, Visibility } from "../db/leagues";
+import type { GeneratedInviteToken } from "./invite-token";
 
 import {
   createAgent,
+  getAgentById,
   getAgentBySymbol,
   isValidSymbol,
   normalizeSymbol,
 } from "../db/agents";
+import {
+  createInvite,
+  findActiveInviteByHash,
+  listInvitesByLeague,
+  revokeInvite,
+  rotateInvite,
+} from "../db/league-invites";
 import {
   addMember,
   leaveMember,
@@ -39,6 +49,10 @@ import {
   isValidLeagueName,
   updateLeague as updateLeagueRow,
 } from "../db/leagues";
+import {
+  generateInviteToken,
+  hashInviteToken,
+} from "./invite-token";
 
 /** The acting user for a league operation. */
 export type Actor = {
@@ -51,7 +65,15 @@ export type Actor = {
 /** Discriminated result for league-management operations. */
 export type LeagueServiceResult<T> =
   | { ok: true; value: T }
-  | { ok: false; reason: "invalid_name" | "invalid_symbol" | "not_found" };
+  | {
+      ok: false;
+      reason:
+        | "agent_not_owned"
+        | "invalid_invite"
+        | "invalid_name"
+        | "invalid_symbol"
+        | "not_found";
+    };
 
 /** Fields accepted by {@link createLeagueForActor}. */
 export type CreateLeagueFields = {
@@ -227,4 +249,133 @@ export async function listParticipants(
   const viewable = await getViewableLeague(db, actor, leagueId);
   if (!viewable.ok) return viewable;
   return { ok: true, value: await listActiveParticipants(db, leagueId) };
+}
+
+/** The newly created invite plus its one-time secret token. */
+export type CreatedInvite = {
+  invite: LeagueInvite;
+  token: GeneratedInviteToken["token"];
+};
+
+/** The membership produced by accepting an invite. */
+export type AcceptedInvite = {
+  leagueId: number;
+  agentId: number;
+  symbol: string;
+};
+
+/**
+ * Create a new reusable invite link for a league. Requires the actor to own the
+ * league or be an admin. The raw token is returned once for display and is never
+ * persisted; only its hash and prefix are stored.
+ */
+export async function createLeagueInvite(
+  db: D1Database,
+  actor: Actor,
+  leagueId: number,
+): Promise<LeagueServiceResult<CreatedInvite>> {
+  const manageable = await requireManageableLeague(db, actor, leagueId);
+  if (!manageable.ok) return { ok: false, reason: "not_found" };
+
+  const generated = await generateInviteToken();
+  const invite = await createInvite(db, {
+    league_id: leagueId,
+    token_hash: generated.hash,
+    token_prefix: generated.prefix,
+    created_by_user_id: actor.userId,
+  });
+  return { ok: true, value: { invite, token: generated.token } };
+}
+
+/**
+ * Rotate a league's invite link: revoke every active invite and issue a fresh
+ * one, so any previously shared URL stops working. Requires owner or admin.
+ */
+export async function rotateLeagueInvite(
+  db: D1Database,
+  actor: Actor,
+  leagueId: number,
+): Promise<LeagueServiceResult<CreatedInvite>> {
+  const manageable = await requireManageableLeague(db, actor, leagueId);
+  if (!manageable.ok) return { ok: false, reason: "not_found" };
+
+  const generated = await generateInviteToken();
+  const invite = await rotateInvite(db, {
+    league_id: leagueId,
+    token_hash: generated.hash,
+    token_prefix: generated.prefix,
+    created_by_user_id: actor.userId,
+  });
+  return { ok: true, value: { invite, token: generated.token } };
+}
+
+/**
+ * Revoke a single invite by id, scoped to its league. Requires owner or admin.
+ * Returns `not_found` when the invite does not belong to the league.
+ */
+export async function revokeLeagueInvite(
+  db: D1Database,
+  actor: Actor,
+  leagueId: number,
+  inviteId: number,
+): Promise<LeagueServiceResult<LeagueInvite>> {
+  const manageable = await requireManageableLeague(db, actor, leagueId);
+  if (!manageable.ok) return { ok: false, reason: "not_found" };
+
+  const revoked = await revokeInvite(db, inviteId, leagueId);
+  if (!revoked) return { ok: false, reason: "not_found" };
+  return { ok: true, value: revoked };
+}
+
+/**
+ * List every invite (active and revoked) for a league. Requires owner or admin.
+ */
+export async function listLeagueInvites(
+  db: D1Database,
+  actor: Actor,
+  leagueId: number,
+): Promise<LeagueServiceResult<LeagueInvite[]>> {
+  const manageable = await requireManageableLeague(db, actor, leagueId);
+  if (!manageable.ok) return { ok: false, reason: "not_found" };
+  return { ok: true, value: await listInvitesByLeague(db, leagueId) };
+}
+
+/**
+ * Accept an invite link: the signed-in actor joins one of their own claimed
+ * agents to the invite's league. Reusable until revoked.
+ *
+ * - Unknown or revoked token → `invalid_invite`.
+ * - Agent unknown or not owned by the actor → `agent_not_owned`.
+ * - Already an active member → idempotent success (no duplicate interval).
+ * - Previously left → a new membership interval is opened.
+ */
+export async function acceptInvite(
+  db: D1Database,
+  actor: Actor,
+  rawToken: string,
+  agentId: number,
+): Promise<LeagueServiceResult<AcceptedInvite>> {
+  const hash = await hashInviteToken(rawToken.trim());
+  const invite = await findActiveInviteByHash(db, hash);
+  if (!invite) return { ok: false, reason: "invalid_invite" };
+
+  const agent = await getAgentById(db, agentId);
+  if (!agent || agent.owner_user_id !== actor.userId) {
+    return { ok: false, reason: "agent_not_owned" };
+  }
+
+  const member = await addMember(db, {
+    league_id: invite.league_id,
+    agent_id: agent.id,
+    added_by_user_id: actor.userId,
+  });
+
+  return {
+    ok: true,
+    value: {
+      leagueId: member.league_id,
+      agentId: agent.id,
+      symbol: agent.symbol,
+    },
+  };
 }
