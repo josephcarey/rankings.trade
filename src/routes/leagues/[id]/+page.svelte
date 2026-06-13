@@ -1,9 +1,16 @@
 <script lang="ts">
+  import { enhance as formEnhance } from "$app/forms";
   import { superForm } from "sveltekit-superforms";
 
-  let { data } = $props();
+  let { data, form: action } = $props();
 
   const { enhance, errors, form, message, submitting } = superForm(data.form);
+
+  const addError = $derived(
+    action?.action === "addParticipant" && "error" in action
+      ? action.error
+      : undefined,
+  );
 </script>
 
 <svelte:head>
@@ -22,6 +29,53 @@
   {#if data.league.description}
     <p class="description">{data.league.description}</p>
   {/if}
+
+  <section class="participants flow">
+    <h2>Participants</h2>
+
+    {#if data.canManage}
+      <form method="POST" action="?/addParticipant" use:formEnhance class="add-form">
+        <div class="field">
+          <label for="symbol">Add by callsign</label>
+          <div class="field-row">
+            <input
+              id="symbol"
+              name="symbol"
+              type="text"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="RANKBOT"
+            />
+            <button type="submit" class="submit-button">Add</button>
+          </div>
+          {#if addError}
+            <p class="field-error">{addError}</p>
+          {/if}
+        </div>
+      </form>
+    {/if}
+
+    {#if data.participants.length === 0}
+      <p class="empty">No participants yet.</p>
+    {:else}
+      <ul class="participant-list">
+        {#each data.participants as participant (participant.agent_id)}
+          <li class="participant-row">
+            <span class="participant-symbol">{participant.symbol}</span>
+            {#if participant.owner_user_id === null}
+              <span class="badge badge-unclaimed">Unclaimed</span>
+            {/if}
+            {#if data.canManage}
+              <form method="POST" action="?/removeParticipant" use:formEnhance>
+                <input type="hidden" name="symbol" value={participant.symbol} />
+                <button type="submit" class="remove-button">Remove</button>
+              </form>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+    {/if}
+  </section>
 
   {#if data.canManage}
     <section class="manage flow">
@@ -99,6 +153,62 @@
   }
 
   .description {
+    color: var(--color-text-muted);
+  }
+
+  .participants {
+    margin-block-start: var(--size-6);
+  }
+
+  .add-form {
+    margin-block-end: var(--size-4);
+  }
+
+  .field-row {
+    display: flex;
+    gap: var(--size-2);
+    align-items: center;
+  }
+
+  .participant-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2);
+  }
+
+  .participant-row {
+    display: flex;
+    align-items: center;
+    gap: var(--size-3);
+    padding: var(--size-2) var(--size-3);
+    border: var(--border-size-1) solid var(--color-surface);
+    border-radius: var(--radius-2);
+  }
+
+  .participant-symbol {
+    font-weight: var(--font-weight-7);
+    font-family: var(--font-mono, monospace);
+  }
+
+  .remove-button {
+    margin-inline-start: auto;
+    padding: var(--size-1) var(--size-3);
+    border: var(--border-size-1) solid var(--color-surface);
+    border-radius: var(--radius-2);
+    background: var(--color-background);
+    color: var(--color-text-muted);
+    cursor: pointer;
+  }
+
+  .empty {
+    color: var(--color-text-muted);
+  }
+
+  .badge-unclaimed {
+    background: var(--color-surface);
     color: var(--color-text-muted);
   }
 

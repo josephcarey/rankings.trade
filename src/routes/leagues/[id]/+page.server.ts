@@ -7,7 +7,10 @@ import type { Actions, PageServerLoad } from "./$types";
 import { signInRedirect } from "../../../lib/auth/guard";
 import { resolveActor } from "../../../lib/leagues/actor";
 import {
+  addParticipant,
   getViewableLeague,
+  listParticipants,
+  removeParticipant,
   updateLeagueDetails,
 } from "../../../lib/leagues/league-service";
 import { leagueDetailsSchema } from "../league-schema";
@@ -18,10 +21,15 @@ function parseId(raw: string | undefined): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+/** Read a string form field, defaulting to empty. */
+function field(value: FormDataEntryValue | null): string {
+  return typeof value === "string" ? value : "";
+}
+
 /**
  * League detail: viewable by anyone for a public league, and by the owner, an
  * admin, or a member-agent owner for a private league. Anything else 404s with
- * no existence leak. `canManage` gates the owner/admin management form.
+ * no existence leak. `canManage` gates the owner/admin management controls.
  */
 export const load: PageServerLoad = async ({ locals, params, platform }) => {
   const id = parseId(params.id);
@@ -40,6 +48,9 @@ export const load: PageServerLoad = async ({ locals, params, platform }) => {
   const canManage =
     actor !== null && (actor.isAdmin || league.owner_user_id === actor.userId);
 
+  const roster = await listParticipants(db, actor, id);
+  const participants = roster.ok ? roster.value : [];
+
   const form = await superValidate(
     {
       name: league.name,
@@ -49,7 +60,7 @@ export const load: PageServerLoad = async ({ locals, params, platform }) => {
     valibot(leagueDetailsSchema),
   );
 
-  return { canManage, form, league };
+  return { canManage, form, league, participants };
 };
 
 export const actions: Actions = {
@@ -88,5 +99,61 @@ export const actions: Actions = {
     }
 
     return message(form, "League updated.");
+  },
+
+  addParticipant: async ({ locals, params, platform, request }) => {
+    const id = parseId(params.id);
+    if (id === null) {
+      error(404, "League not found");
+    }
+
+    const db = platform?.env.DB;
+    const actor = resolveActor(locals.user, locals.userId, platform?.env ?? {});
+    if (!db) {
+      return fail(500, { action: "addParticipant", error: "Unavailable." });
+    }
+    if (!actor) {
+      redirect(302, signInRedirect(`/leagues/${id}`));
+    }
+
+    const data = await request.formData();
+    const symbol = field(data.get("symbol"));
+    const result = await addParticipant(db, actor, id, symbol);
+    if (!result.ok) {
+      if (result.reason === "invalid_symbol") {
+        return fail(400, {
+          action: "addParticipant",
+          error: "Enter a valid callsign (3–20 characters).",
+        });
+      }
+      error(404, "League not found");
+    }
+
+    return { action: "addParticipant", added: result.value };
+  },
+
+  removeParticipant: async ({ locals, params, platform, request }) => {
+    const id = parseId(params.id);
+    if (id === null) {
+      error(404, "League not found");
+    }
+
+    const db = platform?.env.DB;
+    const actor = resolveActor(locals.user, locals.userId, platform?.env ?? {});
+    if (!db) {
+      return fail(500, { action: "removeParticipant", error: "Unavailable." });
+    }
+    if (!actor) {
+      redirect(302, signInRedirect(`/leagues/${id}`));
+    }
+
+    const data = await request.formData();
+    const symbol = field(data.get("symbol"));
+    const result = await removeParticipant(db, actor, id, symbol);
+    if (!result.ok) {
+      error(404, "League not found");
+    }
+
+    return { action: "removeParticipant", removed: result.value };
   },
 };

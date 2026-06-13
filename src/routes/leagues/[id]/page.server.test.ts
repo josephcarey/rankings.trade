@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import Database from "sql.js";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { getAgentBySymbol } from "../../../lib/db/agents";
 import { addMember } from "../../../lib/db/league-members";
 import { getLeagueById } from "../../../lib/db/leagues";
 import { loadMigrations } from "../../../lib/db/loader";
@@ -173,6 +174,100 @@ describe("league detail page server", () => {
       await expect(
         invoke(String(id), { name: "Anon" }, null),
       ).rejects.toMatchObject({ status: 302 });
+    });
+  });
+
+  describe("participant actions", () => {
+    const runAdd = actions.addParticipant as NonNullable<
+      typeof actions.addParticipant
+    >;
+    const runRemove = actions.removeParticipant as NonNullable<
+      typeof actions.removeParticipant
+    >;
+
+    function add(
+      id: string,
+      symbol: string,
+      user: unknown,
+      userId: null | string = null,
+    ) {
+      return runAdd({
+        locals: { user, userId },
+        params: { id },
+        platform: platform(db),
+        request: formRequest({ symbol }),
+      } as never);
+    }
+
+    function remove(
+      id: string,
+      symbol: string,
+      user: unknown,
+      userId: null | string = null,
+    ) {
+      return runRemove({
+        locals: { user, userId },
+        params: { id },
+        platform: platform(db),
+        request: formRequest({ symbol }),
+      } as never);
+    }
+
+    it("lets the owner add an unclaimed participant by callsign", async () => {
+      const id = await newLeague(db, "private");
+      const result = (await add(String(id), "newbot", OWNER.user, "u1")) as {
+        added: { owner_user_id: null | number; symbol: string };
+      };
+      expect(result.added.symbol).toBe("NEWBOT");
+      expect(result.added.owner_user_id).toBeNull();
+
+      const roster = await load({
+        locals: { user: OWNER.user, userId: "u1" },
+        params: { id: String(id) },
+        platform: platform(db),
+      } as never);
+      expect((roster as { participants: unknown[] }).participants).toHaveLength(1);
+    });
+
+    it("rejects an invalid callsign with a 400", async () => {
+      const id = await newLeague(db, "private");
+      const result = (await add(String(id), "x", OWNER.user, "u1")) as {
+        data: { action: string };
+        status: number;
+      };
+      expect(result.status).toBe(400);
+      expect(result.data.action).toBe("addParticipant");
+    });
+
+    it("404s an add from a stranger and writes nothing", async () => {
+      const id = await newLeague(db, "private");
+      await expect(
+        add(String(id), "sneaky", STRANGER.user, "u2"),
+      ).rejects.toMatchObject({ status: 404 });
+      expect(await getAgentBySymbol(db, "SNEAKY")).toBeNull();
+    });
+
+    it("removes an active participant for the owner", async () => {
+      const id = await newLeague(db, "private");
+      await add(String(id), "leaver", OWNER.user, "u1");
+      const result = (await remove(String(id), "leaver", OWNER.user, "u1")) as {
+        removed: { symbol: string };
+      };
+      expect(result.removed.symbol).toBe("LEAVER");
+
+      const roster = await load({
+        locals: { user: OWNER.user, userId: "u1" },
+        params: { id: String(id) },
+        platform: platform(db),
+      } as never);
+      expect((roster as { participants: unknown[] }).participants).toHaveLength(0);
+    });
+
+    it("404s a remove of a non-participant", async () => {
+      const id = await newLeague(db, "private");
+      await expect(
+        remove(String(id), "ghost", OWNER.user, "u1"),
+      ).rejects.toMatchObject({ status: 404 });
     });
   });
 });
