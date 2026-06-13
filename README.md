@@ -34,11 +34,21 @@ kanban-md --dir kanban show 1     # a single card
 
 ### Setup
 
-Install dependencies with Bun:
+Install dependencies with Bun **first** — before running `bun run check` or `bun run ci`:
 
 ```sh
 bun install
 ```
+
+> **Fresh-worktree gotcha.** On a clean checkout, `bun run check` fails immediately
+> (`svelte-check: command not found` / missing `.svelte-kit` types) until the generated
+> SvelteKit files exist. `bun install` triggers the `prepare: svelte-kit sync` hook that
+> generates them, so always run `bun install` first. If `check` still fails with missing
+> `.svelte-kit` types, run the sync step manually:
+>
+> ```sh
+> bunx svelte-kit sync
+> ```
 
 Copy placeholder environment files for local development:
 
@@ -46,6 +56,34 @@ Copy placeholder environment files for local development:
 cp .env.example .env
 cp .dev.vars.example .dev.vars
 ```
+
+Then fill in your Clerk keys — see [Authentication — Clerk](#authentication--clerk) below.
+
+### Authentication — Clerk
+
+The app authenticates users through [Clerk](https://clerk.com) (`svelte-clerk` on the
+frontend, `@clerk/backend` in the Worker). Two keys wire it up locally:
+
+| Variable | File | Visibility | Purpose |
+|---|---|---|---|
+| `PUBLIC_CLERK_PUBLISHABLE_KEY` | `.env` (and `wrangler.toml` `[vars]` for the deployed Worker) | client-safe, shipped to the browser | initializes the Clerk frontend + SSR handler |
+| `CLERK_SECRET_KEY` | `.dev.vars` | server-only, **never** client-exposed | verifies sessions in the Worker runtime |
+
+To set them up:
+
+1. Create an application in the [Clerk dashboard](https://dashboard.clerk.com).
+2. Open **API keys** and copy the **Publishable key** (`pk_test_…`) and **Secret key**
+   (`sk_test_…`).
+3. Put the publishable key in `.env` as `PUBLIC_CLERK_PUBLISHABLE_KEY` and the secret key in
+   `.dev.vars` as `CLERK_SECRET_KEY`. (Both files are git-ignored; `.env.example` /
+   `.dev.vars.example` are the tracked templates.)
+4. Optionally set `ADMIN_CLERK_USER_IDS` in `.dev.vars` to a comma-separated allowlist of
+   Clerk user IDs that should have admin powers (e.g. the `/admin/seasons` page).
+
+> **Note:** `PUBLIC_CLERK_PUBLISHABLE_KEY` must exist as a Worker **runtime** var, not only a
+> build-time var — `svelte-clerk`'s server handler reads it from `$env/dynamic/public` at
+> runtime, so it lives in `wrangler.toml` `[vars]` for the deployed app. Publishable keys are
+> public by design and safe to commit; secret keys are not.
 
 ### Common scripts
 
@@ -55,7 +93,7 @@ bun run build    # Cloudflare Worker bundle via SvelteKit adapter
 bun run check    # svelte-check, TypeScript, knip, ESLint, and bun audit
 bun run test     # Vitest with coverage
 bun run ci       # check + test
-bun run db:migrate  # Run pending D1 migrations (note: requires local development setup)
+bun run db:migrate  # Run pending D1 migrations (requires `wrangler dev` running — see Database & Migrations)
 wrangler dev     # serve the Cloudflare Worker locally after a build/sync
 ```
 
@@ -82,27 +120,36 @@ Local development connects to a local D1 instance via `wrangler dev`.
 ### Migration System
 
 Migrations are forward-only, run-once SQL files stored in the `migrations/` directory with
-numeric prefixes (e.g. `0001_init.sql`, `0002_add_users.sql`). The migration runner:
+numeric prefixes (e.g. `0001_init.sql`, `0002_users.sql`). The migration runner:
 
 1. Applies migrations in lexical order (sorted by filename)
 2. Records applied migrations in a `_migrations` bookkeeping table
 3. Skips already-applied migrations (idempotent)
 4. Fails fast if any migration errors
 
+Each migration may contain multiple SQL statements (separated by `;`).
+
 **Important:** Never edit or delete a shipped migration. Only append new numbered migrations.
-A deployed migration is permanent and immutable.
+A deployed migration is permanent and immutable. Migration numbers are allocated per epic; see
+[`migrations/README.md`](migrations/README.md) for the central numbering ledger (and the
+documented gaps) before picking a new number.
 
-### Running Migrations
+### Running Migrations (local)
 
-To manually run pending migrations during development:
+`scripts/db-migrate.ts` runs against the `DB` binding, which only exists inside the Worker
+runtime that `wrangler dev` provides. Run the two steps **in this order**:
 
 ```sh
+# 1. Start the Worker — this provisions/serves the local D1 instance and the DB binding.
+wrangler dev
+
+# 2. In a second terminal, apply pending migrations against that binding.
 bun run db:migrate
 ```
 
-The runner loads all `.sql` files from `migrations/`, checks which have already been applied,
-and executes pending ones in order. Each migration may contain multiple SQL statements
-(separated by `;`).
+If you run `bun run db:migrate` without `wrangler dev` running, it fails because there is no
+`DB` binding to connect to. The runner loads all `.sql` files from `migrations/`, checks which
+have already been applied, and executes pending ones in order.
 
 ### Column Naming Conventions
 
@@ -121,6 +168,24 @@ The initial migration (`0001_init.sql`) creates the `_migrations` table.
 - **Worker/API:** Hono is mounted under `/api`; `GET /api/health` returns `{ "status": "ok" }`.
 - **Data:** Cloudflare D1 binding named `DB` is configured only as a binding for now.
 - **Quality:** ESLint, knip, Vitest coverage, Prettier defaults, and Bun audit gate local CI.
+
+### Two-worker split (app vs cron)
+
+The project deploys **two** Cloudflare Workers that share the same D1 database:
+
+| Worker | Config | Entry | Deploy | Role |
+|---|---|---|---|---|
+| App | `wrangler.toml` | `.svelte-kit/cloudflare/_worker.js` (generated) | `bun run deploy` | the SvelteKit app + Hono `/api` (fetch handler) |
+| Cron | `wrangler.cron.toml` | `worker/cron.ts` | `bun run deploy:cron` | the 15-minute scrape (`scheduled` handler) |
+
+**Why a separate worker?** `@sveltejs/adapter-cloudflare` v7 owns the main `wrangler.toml` and
+overwrites `main` with its own generated, fetch-only worker bundle — there is no supported way
+to attach a `scheduled` (cron) handler to the app worker without fighting the adapter. The
+scrape therefore lives in a standalone worker (`worker/cron.ts`) configured by
+`wrangler.cron.toml`, which binds the same `DB` and is deployed independently with
+`bun run deploy:cron`. All real scrape logic lives in the tested `scheduledScrape` seam
+(`src/lib/scrape/scheduled.ts`); the cron worker is a thin wrapper. **Deploying the app does
+not deploy the cron worker — run both deploy commands.**
 
 ### Logging
 

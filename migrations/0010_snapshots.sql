@@ -1,3 +1,6 @@
+-- NOTE: Numbering jumps 0008 -> 0010 -- there is no 0009 migration. The reason for the
+-- gap is undocumented (0009 was never committed). It is recorded as an unexplained gap in
+-- the migrations/README.md ledger. Do NOT reuse 0009.
 -- Periodic (15-min cron) captures of each public agent's credits and rank per round.
 -- A round is keyed by the SpaceTraders `resetDate`. Credits is the ranking metric.
 --
