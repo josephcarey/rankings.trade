@@ -295,3 +295,41 @@ export async function countRankedRoundsByAgent(
     .all<{ agent_id: number; n: number }>();
   return new Map((results ?? []).map((row) => [row.agent_id, row.n]));
 }
+
+/** One agent's archived placement in a past season, joined with the season label. */
+export type AgentSeasonHistoryRow = {
+  season_id: number;
+  label: string;
+  closed_at: string | null;
+  final_rating: number;
+  final_rd: number;
+  final_rank: number;
+  title: string | null;
+  established: number;
+  ranked_rounds: number;
+};
+
+/**
+ * One agent's archived season placements (Epic M read API), newest season first. Sourced from
+ * `season_standings` — the retained per-season history written at each season's close (DEC-I2),
+ * never the live `ratings` table — so it never mixes the open season's in-progress state in.
+ */
+export async function listAgentSeasonHistory(
+  db: D1Database,
+  agentId: number,
+): Promise<AgentSeasonHistoryRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT ss.season_id AS season_id, s.label AS label, s.closed_at AS closed_at,
+              ss.final_rating AS final_rating, ss.final_rd AS final_rd,
+              ss.final_rank AS final_rank, ss.title AS title,
+              ss.established AS established, ss.ranked_rounds AS ranked_rounds
+       FROM season_standings ss
+       JOIN seasons s ON s.id = ss.season_id
+       WHERE ss.agent_id = ?
+       ORDER BY ss.season_id DESC`,
+    )
+    .bind(agentId)
+    .all<AgentSeasonHistoryRow>();
+  return results ?? [];
+}

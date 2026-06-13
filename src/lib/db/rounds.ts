@@ -286,6 +286,33 @@ export async function listStandings(
 }
 
 /**
+ * The most recent finalized round that has standings for a league (Epic M read API).
+ * "A league's standings" are the latest frozen round_standings for that league; this
+ * resolves which round those are. Returns null when the league has no finalized
+ * standings yet (e.g. a brand-new league before its first round closed).
+ */
+export async function getLatestFinalizedLeagueRound(
+  db: D1Database,
+  leagueId: number,
+): Promise<Round | null> {
+  const row = await db
+    .prepare(
+      `SELECT ${ROUND_COLUMNS}
+       FROM rounds r
+       WHERE r.finalized_at IS NOT NULL
+         AND EXISTS (
+           SELECT 1 FROM round_standings rs
+           WHERE rs.round_id = r.id AND rs.league_id = ?
+         )
+       ORDER BY r.reset_date DESC, r.id DESC
+       LIMIT 1`,
+    )
+    .bind(leagueId)
+    .first<Round>();
+  return row ?? null;
+}
+
+/**
  * Epic H seam: the Universe standings that should enter the Glicko rating period
  * for a round — registered, participating agents with a credit value. Outcomes are
  * derived from `final_credits` (equal credits = draw); non-participants and

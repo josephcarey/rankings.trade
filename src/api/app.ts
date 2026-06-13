@@ -11,6 +11,7 @@ import { createBotApi } from "./bot";
 import { createIngestionApi } from "./ingestion";
 import { createLeagueMilestoneTypesApi } from "./league-milestone-types";
 import { createModerationApi } from "./moderation";
+import { createPublicReadApi } from "./public-read";
 
 export const api = new Hono<{ Bindings: CloudflareBindings }>().basePath(
   "/api",
@@ -62,6 +63,14 @@ api.route("/me", authed);
 // without falling through to the Clerk middleware that the agents router applies
 // to every /agents/* request. See src/api/ingestion.ts and the routing tests.
 api.route("/agents", createIngestionApi());
+
+// Public, read-only routes (Epic M). Mounted at the root with full paths BEFORE the
+// Clerk agents/leagues routers so a public `GET /agents/:symbol` and
+// `GET /leagues/:id/standings` are served here, rather than hitting a Clerk `use("*")`
+// guard that would 401 anonymous bots. The router defines only exact GET routes (no
+// `use("*")`), so Epic F's bot POSTs and the Clerk GET routes fall through untouched.
+// See src/api/public-read.ts and public-read.test.ts.
+api.route("/", createPublicReadApi());
 
 api.route("/agents", createAgentsApi());
 
