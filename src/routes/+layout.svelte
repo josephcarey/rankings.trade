@@ -38,6 +38,8 @@
       <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
       <a class="nav-link" href="/leaderboard">Leaderboard</a>
       <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
+      <a class="nav-link" href="/hall-of-fame">Hall of Fame</a>
+      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
       <a class="nav-link" href="/rules">Rules</a>
       {#if data.nav.signedIn}
         <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static authed route -->

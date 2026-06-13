@@ -296,6 +296,45 @@ export async function countRankedRoundsByAgent(
   return new Map((results ?? []).map((row) => [row.agent_id, row.n]));
 }
 
+/** One closed-season top-3 placement, joined with the season label and agent symbol. */
+export type SeasonPodiumRow = {
+  season_id: number;
+  label: string;
+  closed_at: string;
+  agent_id: number;
+  symbol: string;
+  final_rank: number;
+  final_rating: number;
+  title: string | null;
+};
+
+/**
+ * Every closed season's podium (final ranks 1..3), newest season first then best
+ * rank first, with agent symbols joined in — the read source for the hall of fame
+ * (Epic N). Champion/podium recognition is DERIVED from this immutable archive
+ * (`season_standings`, DEC-I2); the `s.closed_at IS NOT NULL` filter guarantees an
+ * in-progress season is never surfaced, so recognition is immutable by construction.
+ * A single JOIN avoids per-season N+1 reads.
+ */
+export async function listClosedSeasonPodiums(
+  db: D1Database,
+): Promise<SeasonPodiumRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT ss.season_id AS season_id, s.label AS label, s.closed_at AS closed_at,
+              ss.agent_id AS agent_id, a.symbol AS symbol, ss.final_rank AS final_rank,
+              ss.final_rating AS final_rating, ss.title AS title
+       FROM season_standings ss
+       JOIN seasons s ON s.id = ss.season_id
+       JOIN agents a ON a.id = ss.agent_id
+       WHERE s.closed_at IS NOT NULL
+         AND ss.final_rank <= 3
+       ORDER BY ss.season_id DESC, ss.final_rank ASC, a.symbol ASC`,
+    )
+    .all<SeasonPodiumRow>();
+  return results ?? [];
+}
+
 /** One agent's archived placement in a past season, joined with the season label. */
 export type AgentSeasonHistoryRow = {
   season_id: number;

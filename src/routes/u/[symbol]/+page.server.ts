@@ -83,6 +83,7 @@ export const load: PageServerLoad = async ({ locals, params, platform }) => {
   // Archived season history.
   const historyRecords = await listAgentSeasonHistory(db, agent.id);
   const history = historyRecords.map((h) => ({
+    closed: h.closed_at !== null,
     rank: h.final_rank,
     rankedRounds: h.ranked_rounds,
     rating: h.final_rating,

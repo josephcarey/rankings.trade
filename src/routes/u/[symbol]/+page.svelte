@@ -1,5 +1,6 @@
 <script lang="ts">
   import CreditsChart from "../../../lib/components/credits-chart.svelte";
+  import SeasonBadge from "../../../lib/components/season-badge.svelte";
   import TitleBadge from "../../../lib/components/title-badge.svelte";
 
   let { data } = $props();
@@ -71,6 +72,7 @@
             <tr>
               <th scope="col">Season</th>
               <th scope="col">Title</th>
+              <th scope="col">Recognition</th>
               <th scope="col" class="num">Rank</th>
               <th scope="col" class="num">Rating</th>
               <th scope="col" class="num">Rounds</th>
@@ -81,6 +83,7 @@
               <tr>
                 <td>{row.seasonLabel}</td>
                 <td><TitleBadge title={row.title} /></td>
+                <td><SeasonBadge rank={row.rank} closed={row.closed} /></td>
                 <td class="num">{row.rank}</td>
                 <td class="num">{Math.round(row.rating)}</td>
                 <td class="num">{row.rankedRounds}</td>
