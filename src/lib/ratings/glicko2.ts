@@ -121,7 +121,7 @@ export function glicko2Update(
   const { mu, phi } = toScale(state, config);
 
   if (outcomes.length === 0) {
-    const phiStar = Math.sqrt(phi * phi + state.volatility * state.volatility);
+    const phiStar = Math.hypot(phi, state.volatility);
     return {
       rating: state.rating,
       rd: clampRd(phiStar * config.scale, config),
@@ -148,7 +148,7 @@ export function glicko2Update(
 
   // Step 5–6: new volatility and the pre-rating-period deviation φ*.
   const sigmaPrime = newVolatility(state.volatility, delta, phi, v, config);
-  const phiStar = Math.sqrt(phi * phi + sigmaPrime * sigmaPrime);
+  const phiStar = Math.hypot(phi, sigmaPrime);
 
   // Step 7: new deviation and rating on the Glicko-2 scale.
   const phiPrime = 1 / Math.sqrt(1 / (phiStar * phiStar) + 1 / v);

@@ -113,7 +113,8 @@ describe("applyRatingPeriod + reads", () => {
 
     expect(await listSeasonRatings(db, 1)).toHaveLength(1);
     expect(await listSeasonRatings(db, 2)).toHaveLength(1);
-    expect((await getRating(db, a, 2))?.rating).toBe(1490);
+    const seasonTwo = await getRating(db, a, 2);
+    expect(seasonTwo?.rating).toBe(1490);
   });
 
   it("rejects a duplicate marker for the same round (PK conflict)", async () => {

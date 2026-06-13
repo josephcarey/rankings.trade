@@ -44,7 +44,7 @@ export interface Glicko2Config {
 
 /** The locked production configuration (DEC-1 / DEC-H1). */
 export const GLICKO2_CONFIG: Glicko2Config = {
-  convergenceTolerance: 0.000_001,
+  convergenceTolerance: 0.000001,
   initialRating: 1500,
   initialRd: 350,
   initialVolatility: 0.06,

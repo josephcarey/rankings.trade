@@ -51,7 +51,7 @@ describe("glicko2Update — no games (RD inflation)", () => {
     // φ = 200/scale; φ* = sqrt(φ²+σ²); RD' = φ*·scale.
     const scale = PAPER_CONFIG.scale;
     const phi = 200 / scale;
-    const expected = Math.sqrt(phi * phi + 0.06 * 0.06) * scale;
+    const expected = Math.hypot(phi, 0.06) * scale;
     expect(result.rd).toBeCloseTo(expected, 6);
     expect(result.rd).toBeGreaterThan(200);
   });
