@@ -13,6 +13,10 @@
     Competitive profiles, reset-based rounds, Glicko-2 ratings, seasons, titles, and recognition for
     SpaceTraders agents.
   </p>
+  <p class="cta">
+    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
+    <a class="cta-link" href="/leaderboard">View the Universe leaderboard →</a>
+  </p>
 </main>
 
 <style>
@@ -38,5 +42,10 @@
     color: var(--color-text-muted);
     font-size: var(--font-size-3);
     max-inline-size: 64ch;
+  }
+
+  .cta-link {
+    font-weight: var(--font-weight-7);
+    color: var(--color-link);
   }
 </style>

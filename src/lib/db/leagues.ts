@@ -91,6 +91,28 @@ export async function listPublicLeagues(db: D1Database): Promise<League[]> {
 }
 
 /**
+ * List the leagues an agent is currently an ACTIVE member of, newest league
+ * first (read-only). Returned unfiltered by visibility — callers that surface
+ * these on a public page MUST filter to the leagues the viewer may see (e.g.
+ * via {@link getViewableLeague}) before rendering private ones.
+ */
+export async function listActiveLeaguesForAgent(
+  db: D1Database,
+  agentId: number,
+): Promise<League[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT l.* FROM leagues l
+       JOIN league_members m ON m.league_id = l.id
+       WHERE m.agent_id = ? AND m.left_at IS NULL
+       ORDER BY l.created_at DESC, l.id DESC`,
+    )
+    .bind(agentId)
+    .all<League>();
+  return results ?? [];
+}
+
+/**
  * Create a league owned by `owner_user_id`. Visibility defaults to `private`.
  *
  * @throws If the name is invalid (empty or too long) after trimming.
