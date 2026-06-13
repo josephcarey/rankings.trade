@@ -2,6 +2,8 @@
   import { enhance as formEnhance } from "$app/forms";
   import { superForm } from "sveltekit-superforms";
 
+  import CreditsChart from "../../../lib/components/credits-chart.svelte";
+
   let { data, form: action } = $props();
 
   const { enhance, errors, form, message, submitting } = superForm(data.form);
@@ -40,6 +42,84 @@
   {#if data.league.description}
     <p class="description">{data.league.description}</p>
   {/if}
+
+  <section class="standings flow">
+    <h2>Standings</h2>
+    {#if data.standings.length === 0}
+      <p class="empty">No finalized rounds yet.</p>
+    {:else}
+      {#if data.standingsRound}
+        <p class="muted">Latest finalized round: {data.standingsRound}</p>
+      {/if}
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col" class="num">#</th>
+              <th scope="col">Agent</th>
+              <th scope="col" class="num">Credits</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each data.standings as row (row.symbol)}
+              <tr class:inactive={!row.participated}>
+                <td class="num">{row.rank}</td>
+                <td>
+                  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- dynamic public profile route -->
+                  <a class="callsign" href={`/u/${row.symbol}`}>{row.symbol}</a>
+                </td>
+                <td class="num">
+                  {row.credits === null ? "—" : row.credits.toLocaleString("en-US")}
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
+  </section>
+
+  <section class="graph flow">
+    <h2>Credits over time</h2>
+    <CreditsChart chart={data.chart} caption="Participant credits over time" />
+  </section>
+
+  <section class="activity flow">
+    <h2>Activity</h2>
+    {#if data.activity.length === 0}
+      <p class="empty">No milestones or logs yet.</p>
+    {:else}
+      <ul class="feed">
+        {#each data.activity as item, i (i)}
+          <li class="feed-item">
+            <div class="feed-head">
+              <span class="callsign">{item.symbol}</span>
+              {#if item.kind === "milestone"}
+                <span class="feed-label">{item.label}</span>
+                {#if item.recognized}
+                  <span class="badge badge-recognized">Recognized</span>
+                {:else}
+                  <span class="badge badge-generic">Generic</span>
+                {/if}
+              {:else}
+                <span class="badge badge-log">Log</span>
+              {/if}
+              <time class="muted">{item.ts}</time>
+            </div>
+            {#if item.kind === "milestone" && item.fields.length > 0}
+              <dl class="fields">
+                {#each item.fields as field (field.key)}
+                  <div><dt>{field.key}</dt><dd>{field.value}</dd></div>
+                {/each}
+              </dl>
+            {:else if item.kind === "log"}
+              <p class="log-text">{item.text}</p>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+    {/if}
+  </section>
 
   <section class="participants flow">
     <h2>Participants</h2>
@@ -206,6 +286,107 @@
   }
 
   .description {
+    color: var(--color-text-muted);
+  }
+
+  .standings,
+  .graph,
+  .activity {
+    margin-block-start: var(--size-6);
+  }
+
+  .muted {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-0);
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+  }
+
+  table {
+    inline-size: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    text-align: start;
+    padding: var(--size-2) var(--size-3);
+    border-block-end: var(--border-size-1) solid var(--color-surface);
+  }
+
+  .num {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .callsign {
+    font-family: var(--font-mono, monospace);
+    font-weight: var(--font-weight-7);
+  }
+
+  tr.inactive {
+    opacity: 0.6;
+  }
+
+  .feed {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2);
+  }
+
+  .feed-item {
+    padding: var(--size-2) var(--size-3);
+    border: var(--border-size-1) solid var(--color-surface);
+    border-radius: var(--radius-2);
+  }
+
+  .feed-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--size-2);
+  }
+
+  .feed-label {
+    font-weight: var(--font-weight-7);
+  }
+
+  .fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-3);
+    margin: var(--size-2) 0 0;
+    font-size: var(--font-size-0);
+  }
+
+  .fields dt {
+    color: var(--color-text-muted);
+  }
+
+  .fields dd {
+    margin: 0;
+    font-family: var(--font-mono, monospace);
+  }
+
+  .log-text {
+    margin: var(--size-1) 0 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .badge-recognized {
+    background: var(--color-link);
+    color: var(--color-background);
+  }
+
+  .badge-generic,
+  .badge-log {
+    background: var(--color-surface);
     color: var(--color-text-muted);
   }
 

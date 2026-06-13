@@ -5,6 +5,15 @@ import { valibot } from "sveltekit-superforms/adapters";
 import type { Actions, PageServerLoad } from "./$types";
 
 import { signInRedirect } from "../../../lib/auth/guard";
+import { buildLineChart } from "../../../lib/charts/line-chart";
+import {
+  getLatestFinalizedLeagueRound,
+  listLeagueCreditsSeries,
+} from "../../../lib/db/credits";
+import { listLogsByAgents } from "../../../lib/db/logs";
+import { recognizedTypesForLeague } from "../../../lib/db/milestone-types";
+import { listMilestonesByAgents } from "../../../lib/db/milestones";
+import { listStandings } from "../../../lib/db/rounds";
 import { resolveActor } from "../../../lib/leagues/actor";
 import {
   addParticipant,
@@ -17,6 +26,7 @@ import {
   rotateLeagueInvite,
   updateLeagueDetails,
 } from "../../../lib/leagues/league-service";
+import { describeMilestone } from "../../../lib/render/milestone";
 import { leagueDetailsSchema } from "../league-schema";
 
 /** Parse a route id param into a positive integer, or null when malformed. */
@@ -60,6 +70,57 @@ export const load: PageServerLoad = async ({ locals, params, platform }) => {
   const roster = await listParticipants(db, actor, id);
   const participants = roster.ok ? roster.value : [];
 
+  // Read-only league views: standings (latest finalized league round), an
+  // all-participants credits graph, and a recent milestone/log activity feed.
+  // These reuse the same visibility gate as the roster above (a private
+  // league's data only reaches here for an authorized viewer).
+  const agentIds = participants.map((p) => p.agent_id);
+  const symbolByAgent = new Map(participants.map((p) => [p.agent_id, p.symbol]));
+
+  const latestRound = await getLatestFinalizedLeagueRound(db, id);
+  const standingRows = latestRound
+    ? await listStandings(db, latestRound.id, id)
+    : [];
+  const standings = standingRows.map((s) => ({
+    credits: s.final_credits,
+    participated: s.participated === 1,
+    rank: s.final_rank,
+    symbol: s.agent_symbol,
+  }));
+
+  const series = await listLeagueCreditsSeries(db, id, agentIds);
+  const chart = buildLineChart(
+    series.rounds.map((r) => r.reset_date),
+    agentIds.map((aid) => ({
+      label: symbolByAgent.get(aid) ?? "?",
+      values: series.byAgent.get(aid) ?? [],
+    })),
+  );
+
+  const recognized = await recognizedTypesForLeague(db, id);
+  const milestoneRecords = await listMilestonesByAgents(db, agentIds, 50);
+  const milestoneItems = milestoneRecords.map((m) => {
+    const view = describeMilestone(m, recognized);
+    return {
+      fields: view.fields,
+      kind: "milestone" as const,
+      label: view.label,
+      recognized: view.recognized,
+      symbol: symbolByAgent.get(m.agent_id) ?? "?",
+      ts: m.ts,
+    };
+  });
+  const logRecords = await listLogsByAgents(db, agentIds, 50);
+  const logItems = logRecords.map((l) => ({
+    kind: "log" as const,
+    symbol: symbolByAgent.get(l.agent_id) ?? "?",
+    text: l.text,
+    ts: l.ts,
+  }));
+  const activity = [...milestoneItems, ...logItems]
+    .toSorted((a, b) => b.ts.localeCompare(a.ts))
+    .slice(0, 50);
+
   let invites: { created_at: string; id: number; revoked_at: null | string; token_prefix: string }[] =
     [];
   if (canManage && actor) {
@@ -83,7 +144,7 @@ export const load: PageServerLoad = async ({ locals, params, platform }) => {
     valibot(leagueDetailsSchema),
   );
 
-  return { canManage, form, invites, league, participants };
+  return { canManage, chart, activity, form, invites, league, participants, standings, standingsRound: latestRound?.reset_date ?? null };
 };
 
 export const actions: Actions = {
