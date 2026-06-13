@@ -113,3 +113,35 @@ was run during planning; its findings are folded into the decisions below.
 - **`last_used_at` write throttling**: the bot middleware updates `last_used_at` only when the
   stored value is older than ~10 minutes, avoiding a per-request write hotspot.
 - Rate limiting and request body-size caps remain in **Epic F** (out of Epic C scope).
+
+---
+
+# Epic H — Glicko-2 ratings (design lock)
+
+Locked with the stakeholder before implementing Epic H. Builds on DEC-1; the cards inherit
+these as fixed inputs. The single source of truth in code is `src/lib/ratings/config.ts`
+(`GLICKO2_CONFIG`) — recalibrate there after the first live season.
+
+## DEC-H1 — Concrete Glicko-2 constants, RD band & idempotency model
+
+- **Constants (one editable config module, per DEC-1):** baseline rating **1500**, RD **350**,
+  volatility σ **0.06**, system constant **τ = 0.6**, convergence tolerance ε **1e-6**, scale
+  factor **173.7178**.
+- **RD floor = 30** (DEC-1 left the number open). RD is clamped to **[30, 350]** after every
+  update: the floor stops an established rating from freezing between the infrequent rounds;
+  the cap (= initial RD) bounds idle/unrated inflation. Recalibrate after season 1.
+- **Rating-period granularity:** one period = one finalized **ranked** round (DEC-1). Standings
+  are expanded to an in-memory **round-robin** of pairwise outcomes; **no O(n²) rows are
+  materialized**. Each agent receives exactly **one** update per round.
+- **Tie policy:** equal `final_credits` ⇒ a **draw** (score 0.5), per DEC-1.
+- **Non-participants:** registered agents who already hold a current-season rating but did not
+  participate get the Glicko-2 "did not compete" **RD-inflation** update (φ* = √(φ²+σ²),
+  rating/σ unchanged), once per missed ranked round.
+- **Population:** ratings cover **registered/opted-in** agents only (standings with a non-null
+  `agent_id`), never raw scraped participants.
+- **Season scope:** `ratings` is keyed by `(agent_id, season_id)`; `season_id` is taken from
+  `round.season_id`. The per-season baseline reset is Epic I's job — H only keys by season.
+- **Idempotency:** the trigger applies the whole period in a single atomic D1 `batch()` and
+  stamps each rating row's `last_round_id`. A re-invocation before `rounds.ratings_applied_at`
+  is set detects the round was already applied (any season rating row with
+  `last_round_id = round.id`) and is a no-op — so a crash/replay never double-applies ratings.
