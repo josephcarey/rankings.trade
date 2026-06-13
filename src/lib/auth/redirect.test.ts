@@ -36,4 +36,10 @@ describe("safeRedirectTarget", () => {
     expect(safeRedirectTarget("/sign-in/sso-callback")).toBe("/");
     expect(safeRedirectTarget("/sign-in?redirect_url=/x")).toBe("/");
   });
+
+  it("rejects the sign-up route itself to avoid a redirect loop", () => {
+    expect(safeRedirectTarget("/sign-up")).toBe("/");
+    expect(safeRedirectTarget("/sign-up/verify-email-address")).toBe("/");
+    expect(safeRedirectTarget("/sign-up?redirect_url=/x")).toBe("/");
+  });
 });

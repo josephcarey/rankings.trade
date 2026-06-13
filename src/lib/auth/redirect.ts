@@ -1,5 +1,5 @@
 const HOME = "/";
-const SIGN_IN_PATH = "/sign-in";
+const AUTH_PATHS = ["/sign-in", "/sign-up"] as const;
 
 /**
  * Resolves a post-authentication redirect target to a safe, same-origin
@@ -8,8 +8,8 @@ const SIGN_IN_PATH = "/sign-in";
  * Guards against open redirects: only a same-origin absolute path is allowed
  * (exactly one leading `/`, never a protocol-relative `//` or a path containing
  * a backslash or whitespace that browsers can treat as a scheme/host
- * separator). The sign-in route itself is rejected to avoid a post-login
- * redirect loop. Anything invalid falls back to the home page.
+ * separator). The sign-in and sign-up routes are rejected to avoid a
+ * post-login redirect loop. Anything invalid falls back to the home page.
  *
  * @param raw - The candidate target, e.g. a `redirect_url` query param.
  * @returns A safe relative path beginning with `/`.
@@ -29,10 +29,10 @@ export function safeRedirectTarget(raw: string | null | undefined): string {
     return HOME;
   }
 
-  // Reject the sign-in route itself to prevent a redirect loop.
+  // Reject the auth routes themselves to prevent a post-login redirect loop.
   const separatorIndex = raw.search(/[#?]/);
   const path = separatorIndex === -1 ? raw : raw.slice(0, separatorIndex);
-  if (path === SIGN_IN_PATH || path.startsWith(`${SIGN_IN_PATH}/`)) {
+  if (AUTH_PATHS.some((auth) => path === auth || path.startsWith(`${auth}/`))) {
     return HOME;
   }
 

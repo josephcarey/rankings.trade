@@ -1,24 +1,24 @@
 <script lang="ts">
-  import { SignIn } from "svelte-clerk";
+  import { SignUp } from "svelte-clerk";
 
   let { data } = $props();
 </script>
 
 <svelte:head>
-  <title>Sign in · rankings.trade</title>
+  <title>Sign up · rankings.trade</title>
 </svelte:head>
 
-<main class="sign-in wrapper">
-  <SignIn
+<main class="sign-up wrapper">
+  <SignUp
     routing="path"
-    path="/sign-in"
-    signUpUrl="/sign-up"
+    path="/sign-up"
+    signInUrl="/sign-in"
     fallbackRedirectUrl={data.redirectTo}
   />
 </main>
 
 <style>
-  .sign-in {
+  .sign-up {
     display: flex;
     justify-content: center;
     padding-block: var(--size-8);
