@@ -8,5 +8,5 @@ crons = ["*/15 * * * *"]
 
 [[d1_databases]]
 binding = "DB"
-database_name = "rankings-trade-dev"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_name = "rankings-trade-prod"
+database_id = "03f54a17-4210-412b-9d9b-641078b31a8c"

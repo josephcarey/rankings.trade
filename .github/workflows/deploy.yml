@@ -1,34 +1,38 @@
-name: Deploy
+name: Deploy cron worker
+
+# The main Worker (rankings-trade) is deployed via the Cloudflare dashboard
+# Git integration (Workers Builds), so it is intentionally NOT deployed here.
+# This workflow deploys only the scheduled cron Worker (rankings-trade-cron),
+# which the dashboard integration does not cover.
 
 on:
   push:
     branches:
       - main
+    paths:
+      - "worker/cron.ts"
+      - "wrangler.cron.toml"
+      - "src/**"
+      - "migrations/**"
+      - ".github/workflows/deploy.yml"
 
 jobs:
-  deploy:
+  deploy-cron:
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      
-      - name: Build project
-        run: bun run build
-        env:
-          PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.PUBLIC_CLERK_PUBLISHABLE_KEY }}
-      
-      - name: Deploy to Cloudflare Workers
-        run: bun run deploy
+
+      - name: Deploy cron worker to Cloudflare
+        run: bun run deploy:cron
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
