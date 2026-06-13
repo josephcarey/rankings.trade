@@ -1,5 +1,7 @@
 <script lang="ts">
   import CreditsChart from "../../../lib/components/credits-chart.svelte";
+  import DeltaIndicator from "../../../lib/components/delta-indicator.svelte";
+  import RatingChart from "../../../lib/components/rating-chart.svelte";
   import SeasonBadge from "../../../lib/components/season-badge.svelte";
   import TitleBadge from "../../../lib/components/title-badge.svelte";
 
@@ -23,8 +25,14 @@
     {#if data.current}
       <div class="current">
         <TitleBadge title={data.current.title} />
-        <span class="stat">Rank #{data.current.rank}</span>
-        <span class="stat">Rating {Math.round(data.current.rating)}</span>
+        <span class="stat">
+          Rank #{data.current.rank}
+          <DeltaIndicator delta={data.delta?.rankDelta ?? null} label="Rank" />
+        </span>
+        <span class="stat">
+          Rating {Math.round(data.current.rating)}
+          <DeltaIndicator delta={data.delta?.ratingDelta ?? null} label="Rating" />
+        </span>
         {#if data.seasonLabel}<span class="muted">· {data.seasonLabel}</span>{/if}
       </div>
     {:else}
@@ -42,6 +50,11 @@
   <section class="card flow">
     <h2>Credits this season</h2>
     <CreditsChart chart={data.chart} caption={`Credits for ${data.agent.symbol} this season`} />
+  </section>
+
+  <section class="card flow">
+    <h2>Rating this season</h2>
+    <RatingChart chart={data.ratingChart} caption={`Glicko-2 rating for ${data.agent.symbol} this season`} />
   </section>
 
   <section class="card flow">
@@ -169,6 +182,9 @@
   }
 
   .stat {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--size-1);
     font-variant-numeric: tabular-nums;
     font-weight: var(--font-weight-7);
   }

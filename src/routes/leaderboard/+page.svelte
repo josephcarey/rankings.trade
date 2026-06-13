@@ -1,5 +1,6 @@
 <script lang="ts">
   import CreditsChart from "../../lib/components/credits-chart.svelte";
+  import DeltaIndicator from "../../lib/components/delta-indicator.svelte";
   import TitleBadge from "../../lib/components/title-badge.svelte";
 
   let { data } = $props();
@@ -42,6 +43,7 @@
         <thead>
           <tr>
             <th scope="col" class="num">#</th>
+            <th scope="col" class="move"><span class="sr-only">Rank change</span></th>
             <th scope="col">Agent</th>
             <th scope="col">Title</th>
             <th scope="col" class="num">Rating</th>
@@ -52,6 +54,7 @@
           {#each data.rows as row (row.agentId)}
             <tr>
               <td class="num">{row.rank}</td>
+              <td class="move"><DeltaIndicator delta={row.rankDelta} label="Rank" /></td>
               <td>
                 <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- dynamic public profile route -->
                 <a class="callsign" href={`/u/${row.symbol}`}>{row.symbol}</a>
@@ -118,6 +121,25 @@
   .ranks .num {
     text-align: end;
     font-variant-numeric: tabular-nums;
+  }
+
+  .ranks .move {
+    text-align: start;
+    inline-size: 1%;
+    white-space: nowrap;
+    padding-inline: var(--size-1);
+  }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .callsign {

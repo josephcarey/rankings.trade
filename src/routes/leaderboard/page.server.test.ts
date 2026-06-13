@@ -117,4 +117,56 @@ describe("leaderboard page server load", () => {
     expect(result.rows[0]?.rank).toBe(1);
     expect(result.chart.hasData).toBe(true);
   });
+
+  it("attaches a per-row rank delta from the latest two rounds (null for new entrants)", async () => {
+    const seasonId = await openSeason(db);
+    const a = await insertAgent(db, "ALFA");
+    const b = await insertAgent(db, "BETA");
+    const c = await insertAgent(db, "GAMMA");
+    await insertRating(db, a, seasonId, 1600);
+    await insertRating(db, b, seasonId, 1500);
+    await insertRating(db, c, seasonId, 1400);
+
+    const r1 = await db
+      .prepare(
+        `INSERT INTO rounds (reset_date, season_id, is_ranked, finalized_at)
+         VALUES ('2026-06-01', ?, 1, '2026-06-01T00:00:00Z') RETURNING id`,
+      )
+      .bind(seasonId)
+      .first<{ id: number }>();
+    const r2 = await db
+      .prepare(
+        `INSERT INTO rounds (reset_date, season_id, is_ranked, finalized_at)
+         VALUES ('2026-06-08', ?, 1, '2026-06-08T00:00:00Z') RETURNING id`,
+      )
+      .bind(seasonId)
+      .first<{ id: number }>();
+    // Round 1: ALFA #1, BETA #2. Round 2: BETA overtakes ALFA, GAMMA is new.
+    const hist = (
+      agentId: number,
+      roundId: number,
+      rating: number,
+      rank: number,
+    ) =>
+      db
+        .prepare(
+          `INSERT INTO rating_history (agent_id, season_id, round_id, rating, rd, rank)
+           VALUES (?, ?, ?, ?, 50, ?)`,
+        )
+        .bind(agentId, seasonId, roundId, rating, rank)
+        .run();
+    await hist(a, r1!.id, 1550, 1);
+    await hist(b, r1!.id, 1500, 2);
+    await hist(a, r2!.id, 1600, 1);
+    await hist(b, r2!.id, 1500, 2);
+    await hist(c, r2!.id, 1400, 3);
+
+    const result = (await invoke(db)) as {
+      rows: { rankDelta: null | number; symbol: string }[];
+    };
+    const bySymbol = new Map(result.rows.map((r) => [r.symbol, r.rankDelta]));
+    expect(bySymbol.get("ALFA")).toBe(0);
+    expect(bySymbol.get("BETA")).toBe(0);
+    expect(bySymbol.get("GAMMA")).toBeNull();
+  });
 });
