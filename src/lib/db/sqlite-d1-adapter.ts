@@ -64,12 +64,37 @@ class SqliteD1Statement {
 class SqliteD1Database {
   constructor(private readonly db: SqlJsDatabase) {}
 
+  /**
+   * Execute statements as an atomic unit, mirroring D1's all-or-nothing `batch()`.
+   *
+   * Real D1 `batch()` is transactional, and `applyRatingPeriod`/season-close depend on that
+   * atomicity. The sequential sql.js execution is therefore wrapped in a SAVEPOINT so a failure
+   * partway through rolls back every preceding statement instead of leaving a partial write.
+   */
   async batch(statements: SqliteD1Statement[]): Promise<unknown[]> {
-    const results: unknown[] = [];
-    for (const statement of statements) {
-      results.push(await statement.run());
+    this.db.run("SAVEPOINT d1_batch");
+    try {
+      const results: unknown[] = [];
+      for (const statement of statements) {
+        results.push(await statement.run());
+      }
+      this.db.run("RELEASE d1_batch");
+      return results;
+    } catch (error) {
+      // Best-effort cleanup: if a statement's conflict mode aborted the transaction the
+      // savepoint may already be gone, so swallow cleanup errors and rethrow the real failure.
+      try {
+        this.db.run("ROLLBACK TO d1_batch");
+      } catch {
+        /* savepoint already unwound */
+      }
+      try {
+        this.db.run("RELEASE d1_batch");
+      } catch {
+        /* savepoint already released */
+      }
+      throw error;
     }
-    return results;
   }
 
   prepare(sql: string): SqliteD1Statement {
