@@ -235,8 +235,14 @@ Error codes are machine-readable (e.g., `NOT_FOUND`, `VALIDATION_ERROR`, `UNAUTH
 ### Theming
 
 - **CSS:** CUBE CSS + Open Props design tokens
-- **Dark mode:** Respects `prefers-color-scheme` media query
-- **Layout:** Root `+layout.svelte` renders nav shell with theme-aware styles
+- **Theme modes:** user-selectable Light / Dark / System (System = follow
+  `prefers-color-scheme`, the default). The choice is persisted in a `theme` cookie and
+  applied server-side to `<html data-theme>` (via `hooks.server.ts`), so there's no flash
+  of the wrong theme on first paint. The control lives in the nav (user dropdown / drawer)
+  and on `/settings`; pure mode/cookie logic is in `src/lib/theme`.
+- **Layout:** Root `+layout.svelte` renders the nav shell — a horizontal bar on desktop
+  (with Leagues + account dropdowns) that collapses into an accessible hamburger drawer on
+  narrow viewports (≤640px).
 
 ### Rules / help pages
 

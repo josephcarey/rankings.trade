@@ -15,8 +15,22 @@
   --color-text-muted: var(--gray-7);
 }
 
+/* Dark tokens. Applied for an explicit `data-theme="dark"` choice, and — only
+   when the user is in `system` mode — when the OS/browser prefers dark. The
+   explicit `[data-theme="light"]`/`[data-theme="dark"]` selectors always win
+   over the media query because the media block is scoped to `[data-theme="system"]`. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-accent: var(--cyan-3);
+  --color-background: var(--gray-12);
+  --color-link: var(--cyan-3);
+  --color-surface: var(--gray-10);
+  --color-text: var(--gray-0);
+  --color-text-muted: var(--gray-4);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root[data-theme="system"] {
     color-scheme: dark;
     --color-accent: var(--cyan-3);
     --color-background: var(--gray-12);

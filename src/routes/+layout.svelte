@@ -1,11 +1,18 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
-  import { ClerkProvider, SignOutButton, UserButton } from "svelte-clerk";
+  import { ClerkProvider, SignOutButton } from "svelte-clerk";
 
   import "../styles/app.css";
+  import type { ThemeMode } from "../lib/theme";
+
+  import MobileDrawer from "../lib/components/nav/mobile-drawer.svelte";
+  import NavDropdown from "../lib/components/nav/nav-dropdown.svelte";
+  import ThemeToggle from "../lib/components/theme-toggle.svelte";
 
   let { children, data } = $props();
+
+  let themeMode = $state<ThemeMode>(data.theme);
 
   const handleNavClick = async () => {
     if ($page.route.id !== "/") {
@@ -15,6 +22,50 @@
     }
   };
 </script>
+
+{#snippet publicLinks()}
+  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
+  <a class="nav-link" href="/live">Live</a>
+  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
+  <a class="nav-link" href="/leaderboard">Leaderboard</a>
+  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
+  <a class="nav-link" href="/hall-of-fame">Hall of Fame</a>
+{/snippet}
+
+{#snippet rulesLink()}
+  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
+  <a class="nav-link" href="/rules">Rules</a>
+{/snippet}
+
+{#snippet leaguePanel()}
+  {#each data.leagues as league (league.id)}
+    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- dynamic league detail route -->
+    <a class="nav-link" href={`/leagues/${league.id}`}>{league.name}</a>
+  {/each}
+  {#if data.leagues.length === 0}
+    <span class="nav-empty">You're not in any leagues yet.</span>
+  {/if}
+  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static authed route -->
+  <a class="nav-link nav-manage" href="/leagues">All leagues / Manage</a>
+{/snippet}
+
+{#snippet userPanel()}
+  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static authed route -->
+  <a class="nav-link" href="/agents">Agents</a>
+  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static authed route -->
+  <a class="nav-link" href="/settings">Settings</a>
+  <ThemeToggle bind:mode={themeMode} compact label="Theme" />
+  <SignOutButton redirectUrl="/" class="nav-link signout-button">Log out</SignOutButton>
+{/snippet}
+
+{#snippet userIcon()}
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="24" height="24">
+    <path
+      d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4 0-7 2-7 5v1h14v-1c0-3-3-5-7-5Z"
+      fill="currentColor"
+    />
+  </svg>
+{/snippet}
 
 <ClerkProvider>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -37,27 +88,52 @@
         rankings.trade
       </button>
       <div class="nav-spacer"></div>
-      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
-      <a class="nav-link" href="/live">Live</a>
-      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
-      <a class="nav-link" href="/leaderboard">Leaderboard</a>
-      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
-      <a class="nav-link" href="/hall-of-fame">Hall of Fame</a>
-      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
-      <a class="nav-link" href="/rules">Rules</a>
-      {#if data.nav.signedIn}
-        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static authed route -->
-        <a class="nav-link" href="/agents">Agents</a>
-        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static authed route -->
-        <a class="nav-link" href="/leagues">Leagues</a>
-        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static authed route -->
-        <a class="nav-link" href="/settings">Settings</a>
-        <UserButton />
-        <SignOutButton redirectUrl="/" class="nav-link" />
-      {:else}
-        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public route -->
-        <a class="nav-link" href="/sign-in">Sign in</a>
-      {/if}
+
+      <div class="nav-desktop">
+        {@render publicLinks()}
+        {#if data.nav.signedIn}
+          <NavDropdown label="Leagues">
+            {@render leaguePanel()}
+          </NavDropdown>
+          {@render rulesLink()}
+          <NavDropdown
+            label="Account"
+            triggerClass="nav-icon-button"
+            triggerLabel="Account menu"
+            trigger={userIcon}
+          >
+            {@render userPanel()}
+          </NavDropdown>
+        {:else}
+          {@render rulesLink()}
+          <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public route -->
+          <a class="nav-link" href="/sign-in">Sign in</a>
+          <ThemeToggle bind:mode={themeMode} compact label="Theme" />
+        {/if}
+      </div>
+
+      <div class="nav-mobile">
+        <MobileDrawer label="Menu">
+          <nav class="drawer-nav" aria-label="Primary">
+            {@render publicLinks()}
+            {@render rulesLink()}
+          </nav>
+          {#if data.nav.signedIn}
+            <details class="drawer-section">
+              <summary>Leagues</summary>
+              <div class="drawer-group">{@render leaguePanel()}</div>
+            </details>
+            <div class="drawer-section">
+              <p class="drawer-heading">Account</p>
+              <div class="drawer-group">{@render userPanel()}</div>
+            </div>
+          {:else}
+            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public route -->
+            <a class="nav-link" href="/sign-in">Sign in</a>
+            <ThemeToggle bind:mode={themeMode} label="Theme" />
+          {/if}
+        </MobileDrawer>
+      </div>
     </div>
   </nav>
 
@@ -113,7 +189,27 @@
     flex: 1;
   }
 
-  .nav-link {
+  .nav-desktop {
+    display: flex;
+    align-items: center;
+    gap: var(--size-4);
+  }
+
+  .nav-mobile {
+    display: none;
+  }
+
+  @media (max-width: 640px) {
+    .nav-desktop {
+      display: none;
+    }
+
+    .nav-mobile {
+      display: inline-flex;
+    }
+  }
+
+  :global(.nav-link) {
     font-size: var(--font-size-0);
     font-weight: var(--font-weight-6);
     text-decoration: none;
@@ -127,6 +223,79 @@
     display: inline-flex;
     align-items: center;
     min-block-size: 44px;
+  }
+
+  :global(.nav-link:hover) {
+    color: var(--color-accent);
+  }
+
+  .nav-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: color 150ms ease;
+  }
+
+  .nav-icon-button:hover {
+    color: var(--color-accent);
+  }
+
+  .nav-empty {
+    font-size: var(--font-size-0);
+    color: var(--color-text-muted);
+    padding-block: var(--size-2);
+  }
+
+  :global(.nav-manage) {
+    margin-block-start: var(--size-1);
+    border-block-start: var(--border-size-1) solid var(--color-text-muted);
+    font-weight: var(--font-weight-7);
+  }
+
+  :global(.signout-button) {
+    color: var(--color-accent);
+    text-align: start;
+    justify-content: flex-start;
+  }
+
+  .drawer-nav {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .drawer-section {
+    border-block-start: var(--border-size-1) solid var(--color-text-muted);
+    padding-block-start: var(--size-3);
+  }
+
+  .drawer-section summary {
+    min-block-size: 44px;
+    display: flex;
+    align-items: center;
+    font-weight: var(--font-weight-7);
+    cursor: pointer;
+  }
+
+  .drawer-heading {
+    margin: 0;
+    min-block-size: 44px;
+    display: flex;
+    align-items: center;
+    font-weight: var(--font-weight-7);
+  }
+
+  .drawer-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-1);
+    padding-inline-start: var(--size-2);
   }
 
   .skip-link {
@@ -145,10 +314,6 @@
 
   .skip-link:focus {
     transform: translateY(0);
-  }
-
-  .nav-link:hover {
-    color: var(--color-accent);
   }
 
   main {
