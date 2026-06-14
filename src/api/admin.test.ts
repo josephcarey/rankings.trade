@@ -151,9 +151,9 @@ describe("admin transfer endpoint", () => {
     const sqliteDb = new SQL.Database();
     sqliteDb.run(SCHEMA);
     db = new SQLiteTestDatabase(sqliteDb) as unknown as D1Database;
-    await provisionUser(db, { clerk_user_id: "user_admin", display_name: "Admin", email: null });
-    await provisionUser(db, { clerk_user_id: "user_alice", display_name: "Alice", email: null });
-    await provisionUser(db, { clerk_user_id: "user_bob", display_name: "Bob", email: null });
+    await provisionUser(db, { clerk_user_id: "user_admin", display_name: "Admin", email: null, email_verified: false });
+    await provisionUser(db, { clerk_user_id: "user_alice", display_name: "Alice", email: null, email_verified: false });
+    await provisionUser(db, { clerk_user_id: "user_bob", display_name: "Bob", email: null, email_verified: false });
     aliceId = await userId(db, "user_alice");
     admin = {
       clerk_user_id: "user_admin",

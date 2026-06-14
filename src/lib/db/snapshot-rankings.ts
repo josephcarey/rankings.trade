@@ -17,7 +17,7 @@
 
 /** One agent's live position in the current snapshot cycle. */
 export interface SnapshotRankingRow {
-  /** Dense 1-based rank by descending credits. */
+  /** Ordinal 1-based position by descending credits (ties broken by symbol). */
   readonly rank: number;
   readonly symbol: string;
   /** Local agents.id, or null when the symbol has no agents row (unclaimed). */

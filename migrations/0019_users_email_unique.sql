@@ -11,6 +11,8 @@
 --
 -- The application-level guard in `provisionUser` (src/lib/db/users.ts) prevents
 -- NEW duplicates by re-linking an existing email to a new clerk_user_id. This
--- index is the database-level backstop. NULL emails are excluded so multiple
+-- index is the database-level backstop. It is built on `lower(email)` (and the
+-- app normalizes email to lowercase on write) so case variants like `Joe@x` and
+-- `joe@x` cannot both exist. NULL emails are excluded so multiple
 -- unclaimed/email-less rows remain allowed.
-CREATE UNIQUE INDEX idx_users_email_unique ON users (email) WHERE email IS NOT NULL;
+CREATE UNIQUE INDEX idx_users_email_unique ON users (lower(email)) WHERE email IS NOT NULL;

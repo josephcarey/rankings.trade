@@ -24,9 +24,23 @@ row was inserted instead of re-using the existing one.
   incoming `clerk_user_id` but a row already exists for the same non-null `email`, it updates
   that row's `clerk_user_id` instead of inserting a duplicate. This stops NEW duplicates at the
   source.
+  - **Verified-email only (account-takeover guard):** the re-link fires **only when Clerk reports
+    the primary email as verified** (`email_verified === true`, derived in
+    `src/lib/auth/clerk-identity.ts` from `verification.status === "verified"`). An unverified
+    address can never re-link (and thereby seize) an existing account — such sign-ins fall through
+    to `INSERT`, where the unique index below rejects a genuine duplicate loudly. Assumption: Clerk
+    is the source of truth for email verification.
+  - **Case-insensitive:** email is normalized (trimmed + lowercased) on every write and lookup, so
+    `Joe@x` and `joe@x` are the same account and cannot both exist.
+  - **Newest-row preference (deploy/merge ordering):** the email lookup selects the **newest**
+    matching row (`ORDER BY id DESC`). This matters in the window between deploying the guard and
+    running this merge: while the duplicate still exists, the canonical row is the **higher** id
+    (id 10, not the stale id 1), so a re-auth in that window re-links onto id 10 — it never revives
+    the row this merge is about to delete. (Deploying the guard before the merge is therefore safe,
+    but running the merge promptly is still recommended.)
 - **DB backstop:** migration `0019_users_email_unique.sql` adds a partial unique index on
-  `email` (where not null). **It must be applied only AFTER the merge below** — applying it while
-  the duplicate still exists fails with a uniqueness violation.
+  `lower(email)` (where not null). **It must be applied only AFTER the merge below** — applying it
+  while the duplicate still exists fails with a uniqueness violation.
 
 ## 3. The merge script
 

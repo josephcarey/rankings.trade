@@ -22,7 +22,10 @@ function platform(db: D1Database) {
 }
 
 function invoke(db: null | D1Database) {
-  return load({ platform: db ? platform(db) : undefined } as never);
+  return load({
+    platform: db ? platform(db) : undefined,
+    setHeaders: () => {},
+  } as never);
 }
 
 async function insertSnap(

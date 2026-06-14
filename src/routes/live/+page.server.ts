@@ -16,9 +16,14 @@ const GRAPH_TOP_N = 10;
  * over the cycle's snapshot history. Reads `snapshots` directly so it works
  * BEFORE any round finalizes — unlike the finalize-gated leaderboard.
  */
-export const load: PageServerLoad = async ({ platform }) => {
+export const load: PageServerLoad = async ({ platform, setHeaders }) => {
   const db = platform?.env.DB;
   if (!db) return { chart: null, resetDate: null, rows: [] };
+
+  // Public launch page running a ~190k-row aggregation per request, fed by a
+  // 15-minute scraper — a short cache shields the DB from request spikes while
+  // keeping the view fresh within one snapshot interval.
+  setHeaders({ "cache-control": "public, max-age=30, s-maxage=60" });
 
   const resetDate = await getCurrentSnapshotResetDate(db);
   const rows = await listCurrentUniverseSnapshotRanking(db);

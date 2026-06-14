@@ -9,7 +9,11 @@ import type { ProvisionUserInput } from "../db/users";
  */
 export type ClerkUserLike = {
   id: string;
-  emailAddresses: { emailAddress: string; id: string }[];
+  emailAddresses: {
+    emailAddress: string;
+    id: string;
+    verification: { status: string | null } | null;
+  }[];
   firstName: string | null;
   lastName: string | null;
   primaryEmailAddressId: string | null;
@@ -20,6 +24,9 @@ export type ClerkUserLike = {
  * Maps a Clerk user to the local provisioning identity.
  *
  * - `email` is the primary email address (falling back to the first on file).
+ * - `email_verified` reflects Clerk's verification status for that same address
+ *   (`verification.status === "verified"`); it gates the duplicate-email re-link
+ *   in `provisionUser`, so an unverified address can never take over an account.
  * - `display_name` is the full name (first + last), falling back to the
  *   username, else `null`.
  *
@@ -33,8 +40,9 @@ export function clerkIdentity(user: ClerkUserLike): ProvisionUserInput {
   const primary = user.emailAddresses.find(
     (address) => address.id === user.primaryEmailAddressId,
   );
-  const email =
-    primary?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? null;
+  const chosen = primary ?? user.emailAddresses[0];
+  const email = chosen?.emailAddress ?? null;
+  const email_verified = chosen?.verification?.status === "verified";
 
   const fullName = [user.firstName, user.lastName]
     .filter(Boolean)
@@ -46,5 +54,6 @@ export function clerkIdentity(user: ClerkUserLike): ProvisionUserInput {
     clerk_user_id: user.id,
     display_name: displayName,
     email,
+    email_verified,
   };
 }
