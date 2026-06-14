@@ -87,6 +87,7 @@ describe("settings profile server", () => {
       clerk_user_id: CLERK_USER_ID,
       display_name: "Ada",
       email: "ada@example.com",
+      email_verified: true,
     });
   });
 

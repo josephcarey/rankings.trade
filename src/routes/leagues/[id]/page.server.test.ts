@@ -115,6 +115,35 @@ describe("league detail page server", () => {
       };
       expect(result.canManage).toBe(false);
     });
+
+    it("builds a live members chart from current-cycle snapshots", async () => {
+      const id = await newLeague(db, "private");
+      const agent = await db
+        .prepare("INSERT INTO agents (symbol, owner_user_id) VALUES (?, ?) RETURNING id")
+        .bind("LIVER", 1)
+        .first<{ id: number }>();
+      await addMember(db, { agent_id: agent?.id ?? 0, league_id: id });
+      // Two snapshot buckets in the current cycle for this participant.
+      await db
+        .prepare(
+          `INSERT INTO snapshots (reset_date, observed_at, agent_symbol, credits)
+           VALUES ('2026-06-07', 'T1', 'LIVER', 100), ('2026-06-07', 'T2', 'LIVER', 250)`,
+        )
+        .run();
+
+      const result = (await invoke(String(id), OWNER.user, "u1")) as {
+        liveChart: { hasData: boolean };
+      };
+      expect(result.liveChart.hasData).toBe(true);
+    });
+
+    it("returns an empty live chart when there are no snapshots", async () => {
+      const id = await newLeague(db, "private");
+      const result = (await invoke(String(id), OWNER.user, "u1")) as {
+        liveChart: { hasData: boolean };
+      };
+      expect(result.liveChart.hasData).toBe(false);
+    });
   });
 
   describe("update action", () => {

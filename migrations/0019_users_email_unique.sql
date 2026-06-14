@@ -1,0 +1,18 @@
+-- Epic: launch-ux-data-fixes — prevent duplicate users by email.
+-- Forward-only, append-only — never edit or delete this migration.
+--
+-- ⚠️  ORDERING REQUIREMENT — APPLY ONLY AFTER THE USER MERGE ⚠️
+-- This adds a partial UNIQUE index on `email`. Prod currently holds a DUPLICATE
+-- email (two rows for josephcareycomposer@gmail.com, ids 1 and 10), so applying
+-- this migration BEFORE that duplicate is merged will FAIL with a uniqueness
+-- violation. The operator must run `scripts/ops/merge-users.sql` first
+-- (see docs/runbooks/user-merge.md), then apply migrations. On a fresh/clean DB
+-- (e.g. the test suite) there is no duplicate, so it applies cleanly.
+--
+-- The application-level guard in `provisionUser` (src/lib/db/users.ts) prevents
+-- NEW duplicates by re-linking an existing email to a new clerk_user_id. This
+-- index is the database-level backstop. It is built on `lower(email)` (and the
+-- app normalizes email to lowercase on write) so case variants like `Joe@x` and
+-- `joe@x` cannot both exist. NULL emails are excluded so multiple
+-- unclaimed/email-less rows remain allowed.
+CREATE UNIQUE INDEX idx_users_email_unique ON users (lower(email)) WHERE email IS NOT NULL;

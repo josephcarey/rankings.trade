@@ -82,6 +82,16 @@
   </section>
 
   <section class="graph flow">
+    <h2>Credits this cycle (live)</h2>
+    <LineChart
+      chart={data.liveChart}
+      caption="Participant credits over the current cycle, from live snapshots"
+      emptyText="No live snapshots for these participants yet."
+      legend
+    />
+  </section>
+
+  <section class="graph flow">
     <h2>Credits over time</h2>
     <LineChart
       chart={data.chart}

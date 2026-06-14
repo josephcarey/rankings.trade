@@ -38,6 +38,8 @@
       </button>
       <div class="nav-spacer"></div>
       <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
+      <a class="nav-link" href="/live">Live</a>
+      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
       <a class="nav-link" href="/leaderboard">Leaderboard</a>
       <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static public content route -->
       <a class="nav-link" href="/hall-of-fame">Hall of Fame</a>

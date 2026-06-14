@@ -21,8 +21,16 @@ describe("clerkIdentity", () => {
     const identity = clerkIdentity(
       makeUser({
         emailAddresses: [
-          { emailAddress: "secondary@example.com", id: "e2" },
-          { emailAddress: "primary@example.com", id: "e1" },
+          {
+            emailAddress: "secondary@example.com",
+            id: "e2",
+            verification: { status: "verified" },
+          },
+          {
+            emailAddress: "primary@example.com",
+            id: "e1",
+            verification: { status: "verified" },
+          },
         ],
         primaryEmailAddressId: "e1",
       }),
@@ -34,7 +42,13 @@ describe("clerkIdentity", () => {
   it("falls back to the first email when no primary is set", () => {
     const identity = clerkIdentity(
       makeUser({
-        emailAddresses: [{ emailAddress: "first@example.com", id: "e1" }],
+        emailAddresses: [
+          {
+            emailAddress: "first@example.com",
+            id: "e1",
+            verification: { status: "verified" },
+          },
+        ],
       }),
     );
 
@@ -43,6 +57,53 @@ describe("clerkIdentity", () => {
 
   it("returns null email when there are no addresses", () => {
     expect(clerkIdentity(makeUser()).email).toBeNull();
+  });
+
+  it("reports email_verified true when the chosen address is verified", () => {
+    const identity = clerkIdentity(
+      makeUser({
+        emailAddresses: [
+          {
+            emailAddress: "primary@example.com",
+            id: "e1",
+            verification: { status: "verified" },
+          },
+        ],
+        primaryEmailAddressId: "e1",
+      }),
+    );
+
+    expect(identity.email_verified).toBe(true);
+  });
+
+  it("reports email_verified false when the chosen address is unverified", () => {
+    const identity = clerkIdentity(
+      makeUser({
+        emailAddresses: [
+          {
+            emailAddress: "primary@example.com",
+            id: "e1",
+            verification: { status: "unverified" },
+          },
+        ],
+        primaryEmailAddressId: "e1",
+      }),
+    );
+
+    expect(identity.email_verified).toBe(false);
+  });
+
+  it("reports email_verified false when verification is missing", () => {
+    const identity = clerkIdentity(
+      makeUser({
+        emailAddresses: [
+          { emailAddress: "primary@example.com", id: "e1", verification: null },
+        ],
+        primaryEmailAddressId: "e1",
+      }),
+    );
+
+    expect(identity.email_verified).toBe(false);
   });
 
   it("builds display_name from first and last name", () => {

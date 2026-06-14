@@ -43,6 +43,14 @@ export type ProvisionUserInput = {
   clerk_user_id: string;
   display_name: string | null;
   email: string | null;
+  /**
+   * Whether Clerk reports the primary email as verified. The duplicate-by-email
+   * re-link in {@link provisionUser} only fires for a VERIFIED email — an
+   * unverified address must never be allowed to re-link (take over) an existing
+   * account. Unverified callers fall through to INSERT, where the `email`
+   * unique index (migration 0019) rejects a genuine duplicate loudly.
+   */
+  email_verified: boolean;
 };
 
 /**
@@ -74,6 +82,45 @@ export async function getUserByClerkId(
 }
 
 /**
+ * Normalize an email for storage and comparison: trim surrounding whitespace and
+ * lowercase it. Returns null for null/empty input. Keeping every write and lookup
+ * normalized makes the email re-link guard and the `email` unique index
+ * (migration 0019, a `lower(email)` expression index) robust to case — so
+ * `Joe@x` and `joe@x` collapse to one account instead of bypassing both.
+ */
+function normalizeEmail(email: string | null): string | null {
+  if (email === null) return null;
+  const trimmed = email.trim().toLowerCase();
+  return trimmed === "" ? null : trimmed;
+}
+
+/**
+ * Retrieve a user record by email, preferring the NEWEST matching row
+ * (`ORDER BY id DESC`). Newest-first matters during the window between deploying
+ * this guard and running the manual user merge: while a duplicate still exists,
+ * the canonical row is the higher id (e.g. id 10, not the stale id 1), so a
+ * re-auth in that window re-links onto the canonical row rather than reviving the
+ * row the merge is about to delete. Email is normalized before comparison so the
+ * match is case-insensitive. Null/empty emails never match.
+ *
+ * @param db D1 database instance
+ * @param email Email address to look up
+ * @returns The matching user record, or null if none / email is null
+ */
+async function getUserByEmail(
+  db: D1Database,
+  email: string | null,
+): Promise<User | null> {
+  const normalized = normalizeEmail(email);
+  if (normalized === null) return null;
+  const result = await db
+    .prepare("SELECT * FROM users WHERE email = ? ORDER BY id DESC LIMIT 1")
+    .bind(normalized)
+    .first<User>();
+  return result ?? null;
+}
+
+/**
  * Insert or update a user record keyed on `clerk_user_id`.
  *
  * On conflict (same `clerk_user_id`) the email, display_name, visibility,
@@ -89,7 +136,7 @@ export async function upsertUser(
   input: UpsertUserInput,
 ): Promise<User> {
   const clerkUserId = input.clerk_user_id;
-  const email = input.email ?? null;
+  const email = normalizeEmail(input.email ?? null);
   const displayName = input.display_name ?? null;
   const visibility = input.visibility ?? "public";
   const dashboardUrl = input.dashboard_url ?? null;
@@ -126,15 +173,63 @@ export async function upsertUser(
  * **preserved** — this is the key difference from {@link upsertUser}, which
  * overwrites them.
  *
+ * **Duplicate-by-email guard:** when no row matches `clerk_user_id` but a row
+ * already exists for the same (non-null) `email`, that row is RE-LINKED to the
+ * new `clerk_user_id` (and its Clerk fields refreshed) instead of inserting a
+ * second row. This prevents the duplicate-email/different-clerk-id rows that
+ * arise when a user re-authenticates under a fresh Clerk identity. The user's
+ * local-only fields (`visibility`, `dashboard_url`) are preserved on re-link.
+ *
+ * **Account-takeover guard:** the re-link only fires when `email_verified` is
+ * true. An unverified email must never re-link (and thereby seize) an existing
+ * account; such callers fall through to INSERT, where the `email` unique index
+ * (migration 0019) rejects a genuine duplicate loudly.
+ *
  * @param db D1 database instance
  * @param input The current Clerk identity (id + mutable Clerk fields)
- * @returns The resulting (inserted or refreshed) user record
+ * @returns The resulting (inserted, refreshed, or re-linked) user record
  * @throws If the record cannot be read back after the write
  */
 export async function provisionUser(
   db: D1Database,
   input: ProvisionUserInput,
 ): Promise<User> {
+  const email = normalizeEmail(input.email);
+
+  // Re-link guard: a known, VERIFIED email under a NEW Clerk id updates the
+  // existing row rather than creating a duplicate. Only applies when this Clerk
+  // id is unseen and Clerk reports the email as verified.
+  const existingByClerk = await getUserByClerkId(db, input.clerk_user_id);
+  if (!existingByClerk && input.email_verified) {
+    const existingByEmail = await getUserByEmail(db, email);
+    if (existingByEmail) {
+      await db
+        .prepare(
+          `UPDATE users
+             SET clerk_user_id = ?,
+                 email         = ?,
+                 display_name  = ?,
+                 updated_at    = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+        )
+        .bind(
+          input.clerk_user_id,
+          email,
+          input.display_name,
+          existingByEmail.id,
+        )
+        .run();
+
+      const relinked = await getUserByClerkId(db, input.clerk_user_id);
+      if (!relinked) {
+        throw new Error(
+          `provisionUser: record not found after re-link (${input.clerk_user_id})`,
+        );
+      }
+      return relinked;
+    }
+  }
+
   await db
     .prepare(
       `INSERT INTO users (clerk_user_id, email, display_name)
@@ -144,7 +239,7 @@ export async function provisionUser(
          display_name = excluded.display_name,
          updated_at   = CURRENT_TIMESTAMP`,
     )
-    .bind(input.clerk_user_id, input.email, input.display_name)
+    .bind(input.clerk_user_id, email, input.display_name)
     .run();
 
   const user = await getUserByClerkId(db, input.clerk_user_id);

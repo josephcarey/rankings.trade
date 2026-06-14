@@ -1,5 +1,8 @@
 # Runbook — Season close / finalization
 
+> See also: [`season-calendar.md`](season-calendar.md) — the concrete season/off-week schedule
+> and how `cutoff_date` + `unranked_gap_days` map to dates.
+
 > A **season** is the ranked period that Glicko-2 ratings, titles, and ranks are scoped to
 > (Epic I). At most one season is open at a time (`closed_at IS NULL`). This runbook covers the
 > operator actions around a season boundary; the close itself is **automatic**, driven by the

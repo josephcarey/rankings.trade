@@ -5,6 +5,9 @@
 > write is a separate, human-triggered step. Do **not** run any `--remote` write against the
 > production D1 until the cutover is explicitly approved.
 
+> See also: [`season-calendar.md`](season-calendar.md) — the season/off-week schedule and the
+> `cutoff_date` / `unranked_gap_days` mechanic that bootstraps Season 1.
+
 ## 1. What this migration does
 
 A one-time backfill of the legacy **SpaceJam leaderboard** history into rankings.trade:

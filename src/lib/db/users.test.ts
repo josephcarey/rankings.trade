@@ -371,6 +371,7 @@ describe("provisionUser", () => {
       clerk_user_id: "user_new",
       display_name: "Ada Lovelace",
       email: "ada@example.com",
+      email_verified: true,
     });
 
     expect(user.clerk_user_id).toBe("user_new");
@@ -385,11 +386,13 @@ describe("provisionUser", () => {
       clerk_user_id: "user_1",
       display_name: "Ada",
       email: "ada@example.com",
+      email_verified: true,
     });
     const second = await provisionUser(db, {
       clerk_user_id: "user_1",
       display_name: "Ada",
       email: "ada@example.com",
+      email_verified: true,
     });
 
     expect(second.id).toBe(first.id);
@@ -400,6 +403,7 @@ describe("provisionUser", () => {
       clerk_user_id: "user_1",
       display_name: "Old Name",
       email: "old@example.com",
+      email_verified: true,
     });
     // The user later sets local-only fields via the profile settings flow.
     await updateUserProfile(db, "user_1", {
@@ -412,6 +416,7 @@ describe("provisionUser", () => {
       clerk_user_id: "user_1",
       display_name: "New Name",
       email: "new@example.com",
+      email_verified: true,
     });
 
     expect(refreshed.email).toBe("new@example.com");
@@ -425,9 +430,106 @@ describe("provisionUser", () => {
       clerk_user_id: "user_anon",
       display_name: null,
       email: null,
+      email_verified: false,
     });
 
     expect(user.email).toBeNull();
     expect(user.display_name).toBeNull();
+  });
+
+  it("re-links an existing email to a new Clerk id instead of duplicating", async () => {
+    const original = await provisionUser(db, {
+      clerk_user_id: "clerk_old",
+      display_name: "Joe",
+      email: "joe@example.com",
+      email_verified: true,
+    });
+    await updateUserProfile(db, "clerk_old", {
+      dashboard_url: "https://dash.example.com",
+      visibility: "private",
+    });
+
+    // Same email re-authenticates under a brand-new Clerk id.
+    const relinked = await provisionUser(db, {
+      clerk_user_id: "clerk_new",
+      display_name: "Joseph",
+      email: "joe@example.com",
+      email_verified: true,
+    });
+
+    // Same row, re-pointed to the new Clerk id — no duplicate created.
+    expect(relinked.id).toBe(original.id);
+    expect(relinked.clerk_user_id).toBe("clerk_new");
+    expect(relinked.display_name).toBe("Joseph");
+    // Local-only fields preserved across the re-link.
+    expect(relinked.visibility).toBe("private");
+    expect(relinked.dashboard_url).toBe("https://dash.example.com");
+
+    const all = await db.prepare("SELECT COUNT(*) AS n FROM users").first<{ n: number }>();
+    expect(all?.n).toBe(1);
+    // The old Clerk id no longer resolves a row.
+    expect(await getUserByClerkId(db, "clerk_old")).toBeNull();
+  });
+
+  it("does not re-link when email is null (creates a separate row)", async () => {
+    await provisionUser(db, {
+      clerk_user_id: "clerk_a",
+      display_name: "A",
+      email: null,
+      email_verified: false,
+    });
+    await provisionUser(db, {
+      clerk_user_id: "clerk_b",
+      display_name: "B",
+      email: null,
+      email_verified: false,
+    });
+
+    const all = await db.prepare("SELECT COUNT(*) AS n FROM users").first<{ n: number }>();
+    expect(all?.n).toBe(2);
+  });
+
+  it("does NOT re-link an UNVERIFIED email — falls through to a new row", async () => {
+    const original = await provisionUser(db, {
+      clerk_user_id: "clerk_real",
+      display_name: "Real Owner",
+      email: "owner@example.com",
+      email_verified: true,
+    });
+
+    // An attacker signs up with the same email but Clerk has not verified it.
+    const attacker = await provisionUser(db, {
+      clerk_user_id: "clerk_attacker",
+      display_name: "Imposter",
+      email: "owner@example.com",
+      email_verified: false,
+    });
+
+    // No takeover: the original row is untouched and a separate row was created.
+    expect(attacker.id).not.toBe(original.id);
+    expect(await getUserByClerkId(db, "clerk_real")).not.toBeNull();
+    const all = await db.prepare("SELECT COUNT(*) AS n FROM users").first<{ n: number }>();
+    expect(all?.n).toBe(2);
+  });
+
+  it("matches email case-insensitively when re-linking a verified email", async () => {
+    const original = await provisionUser(db, {
+      clerk_user_id: "clerk_lower",
+      display_name: "Joe",
+      email: "joe@example.com",
+      email_verified: true,
+    });
+
+    const relinked = await provisionUser(db, {
+      clerk_user_id: "clerk_upper",
+      display_name: "Joe",
+      email: "JOE@Example.com",
+      email_verified: true,
+    });
+
+    expect(relinked.id).toBe(original.id);
+    expect(relinked.email).toBe("joe@example.com");
+    const all = await db.prepare("SELECT COUNT(*) AS n FROM users").first<{ n: number }>();
+    expect(all?.n).toBe(1);
   });
 });

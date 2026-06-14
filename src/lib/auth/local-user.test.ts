@@ -68,7 +68,13 @@ const USERS_SCHEMA = `
 
 const CLERK_USER: ClerkUserLike = {
   id: "user_1",
-  emailAddresses: [{ emailAddress: "ada@example.com", id: "e1" }],
+  emailAddresses: [
+    {
+      emailAddress: "ada@example.com",
+      id: "e1",
+      verification: { status: "verified" },
+    },
+  ],
   firstName: "Ada",
   lastName: "Lovelace",
   primaryEmailAddressId: "e1",
