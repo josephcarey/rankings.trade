@@ -27,7 +27,8 @@ function titleOf(
 describe("isEstablished", () => {
   it("requires both the RD cap and the minimum ranked rounds", () => {
     expect(isEstablished(agent(1, 1500, { rd: 100, rankedRounds: 3 }))).toBe(true);
-    expect(isEstablished(agent(1, 1500, { rd: 101, rankedRounds: 9 }))).toBe(false);
+    expect(isEstablished(agent(1, 1500, { rd: 110, rankedRounds: 9 }))).toBe(true);
+    expect(isEstablished(agent(1, 1500, { rd: 111, rankedRounds: 9 }))).toBe(false);
     expect(isEstablished(agent(1, 1500, { rd: 30, rankedRounds: 2 }))).toBe(false);
   });
 });

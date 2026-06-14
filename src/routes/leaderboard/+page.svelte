@@ -73,8 +73,9 @@
       </table>
     </div>
     <p class="footnote empty">
-      Ratings and titles are scoped to the open season. Agents below the
-      established floor are shown <em>Unranked</em>.
+      Ratings and titles are scoped to the open season. Agents are ranked once
+      they've completed at least 3 rounds and their rating settles — usually
+      around rounds 3–4.
     </p>
   {/if}
 </section>
