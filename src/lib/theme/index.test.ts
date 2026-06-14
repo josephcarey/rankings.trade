@@ -60,11 +60,12 @@ describe("resolveAppliedTheme", () => {
 });
 
 describe("themeCookieString", () => {
-  it("encodes the mode with site-wide, long-lived, lax attributes", () => {
+  it("encodes the mode with site-wide, long-lived, lax, secure attributes", () => {
     const cookie = themeCookieString("dark");
     expect(cookie).toContain(`${THEME_COOKIE}=dark`);
     expect(cookie).toContain("Path=/");
     expect(cookie).toContain("SameSite=Lax");
+    expect(cookie).toContain("Secure");
     expect(cookie).toMatch(/Max-Age=\d+/);
   });
 

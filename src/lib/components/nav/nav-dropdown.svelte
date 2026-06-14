@@ -3,7 +3,6 @@
   import { type Snippet, tick } from "svelte";
 
   import { clickOutside } from "./interactions";
-  import { uid } from "./uid";
 
   type Props = {
     /** Accessible label / default trigger text. */
@@ -32,7 +31,8 @@
   let open = $state(false);
   let triggerEl = $state<HTMLButtonElement>();
   let panelEl = $state<HTMLDivElement>();
-  const panelId = `nav-dropdown-${uid()}`;
+  const uid = $props.id();
+  const panelId = `nav-dropdown-${uid}`;
 
   function close(returnFocus = true) {
     if (!open) return;
@@ -65,7 +65,6 @@
     bind:this={triggerEl}
     type="button"
     class={triggerClass}
-    aria-haspopup="true"
     aria-expanded={open}
     aria-controls={panelId}
     aria-label={triggerLabel}

@@ -67,7 +67,7 @@ export function resolveAppliedTheme(
  * `HttpOnly` so the client toggle can write it live without a round-trip.
  */
 export function themeCookieString(mode: ThemeMode): string {
-  return `${THEME_COOKIE}=${mode}; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+  return `${THEME_COOKIE}=${mode}; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax; Secure`;
 }
 
 /**

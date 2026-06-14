@@ -3,7 +3,6 @@
   import { type Snippet, tick } from "svelte";
 
   import { trapFocus } from "./interactions";
-  import { uid } from "./uid";
 
   type Props = {
     /** Drawer contents (links, controls). */
@@ -17,7 +16,8 @@
   let open = $state(false);
   let triggerEl = $state<HTMLButtonElement>();
   let panelEl = $state<HTMLElement>();
-  const panelId = `mobile-drawer-${uid()}`;
+  const uid = $props.id();
+  const panelId = `mobile-drawer-${uid}`;
 
   function close(returnFocus = true) {
     if (!open) return;

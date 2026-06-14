@@ -16,6 +16,11 @@
     label = "Theme",
   }: Props = $props();
 
+  // Per-instance group name: browsers group radios document-wide by `name`, so
+  // two ThemeToggles on one page (e.g. nav + /settings) must not share it.
+  const uid = $props.id();
+  const groupName = `theme-mode-${uid}`;
+
   const options: { value: ThemeMode; label: string }[] = [
     { value: "light", label: "Light" },
     { value: "dark", label: "Dark" },
@@ -35,7 +40,7 @@
       <label class="option">
         <input
           type="radio"
-          name="theme-mode"
+          name={groupName}
           value={option.value}
           checked={mode === option.value}
           onchange={() => select(option.value)}
