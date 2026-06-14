@@ -57,7 +57,10 @@ export interface TitleConfig {
 
 /** The locked production title ladder (DEC-2 / DEC-I1). */
 export const TITLE_CONFIG: TitleConfig = {
-  establishedFloor: { maxRd: 100, minRankedRounds: 3 },
+  // Season-1 recalibration of the design-locked DEC-I1 RD cap (100 → 110): empirically RD is
+  // ~162 after round 1 and tightens to ~101 by round 3, so a 110 cap makes the ≥3-ranked-rounds
+  // rule the binding gate and titles reliably appear at round 3 instead of slipping to round 4.
+  establishedFloor: { maxRd: 110, minRankedRounds: 3 },
   tiers: [
     { kind: "percentile", minPercentile: 0.98, minRatingGate: 2200, name: "Fleet Admiral" },
     { kind: "percentile", minPercentile: 0.9, minRatingGate: 2000, name: "Admiral" },
