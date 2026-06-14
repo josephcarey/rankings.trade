@@ -43,6 +43,7 @@ migration, take the next unused number **after** the highest one listed here, an
 | **0016** | — | K — import/cutover | **RESERVED, UNUSED.** Same as 0015. Do **not** reuse. |
 | 0017 | `0017_rating_history.sql` | O — history | Append-only per-round Glicko-2 rating history (deltas + rating-over-time). |
 | 0018 | `0018_open_season_standings.sql` | Perf (audit §8.1) | Materialized cache of the OPEN season's live standings; written on ranked-round finalize, read by the leaderboard/profile paths instead of recomputing per request. |
+| 0019 | `0019_users_email_unique.sql` | launch-ux-data-fixes | Partial unique index on `users.email` (where not null) to block duplicate-by-email rows. **Apply only AFTER `scripts/ops/merge-users.sql`** — see [`docs/runbooks/user-merge.md`](../docs/runbooks/user-merge.md). |
 
 ### Gap summary
 
@@ -52,4 +53,4 @@ migration, take the next unused number **after** the highest one listed here, an
 - **0015–0016** — reserved for Epic K, unused (the import adds no migration; see
   [`docs/runbooks/k-cutover.md`](../docs/runbooks/k-cutover.md)).
 
-The next free migration number is **0019**.
+The next free migration number is **0020**.

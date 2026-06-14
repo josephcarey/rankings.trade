@@ -55,6 +55,55 @@ describe("leagues page server", () => {
       expect(result.leagues.map((l) => l.name)).toEqual(["Mine"]);
     });
 
+    it("includes leagues where the caller owns an enrolled agent (deduped)", async () => {
+      // A league owned by someone else, where USER owns an active member agent.
+      await db
+        .prepare("INSERT INTO leagues (id, name, owner_user_id) VALUES (?, ?, ?)")
+        .bind(10, "Enrolled", 2)
+        .run();
+      // A league USER owns AND is enrolled in — must appear exactly once.
+      await db
+        .prepare("INSERT INTO leagues (id, name, owner_user_id) VALUES (?, ?, ?)")
+        .bind(20, "Both", 1)
+        .run();
+      const agentId = (await db
+        .prepare("INSERT INTO agents (symbol, owner_user_id) VALUES (?, ?) RETURNING id")
+        .bind("MYAGENT", 1)
+        .first<{ id: number }>())!.id;
+      await db
+        .prepare("INSERT INTO league_members (league_id, agent_id) VALUES (?, ?)")
+        .bind(10, agentId)
+        .run();
+      await db
+        .prepare("INSERT INTO league_members (league_id, agent_id) VALUES (?, ?)")
+        .bind(20, agentId)
+        .run();
+
+      const result = (await load({
+        locals: { user: USER },
+        platform: platform(db),
+      } as never)) as { leagues: { id: number; name: string }[] };
+
+      const names = result.leagues.map((l) => l.name).toSorted();
+      expect(names).toEqual(["Both", "Enrolled"]);
+      // Deduped: "Both" appears once even though USER owns and is enrolled.
+      expect(result.leagues.filter((l) => l.id === 20)).toHaveLength(1);
+    });
+
+    it("returns no leagues for a user who owns none and is enrolled in none", async () => {
+      await db
+        .prepare("INSERT INTO leagues (name, owner_user_id) VALUES (?, ?)")
+        .bind("Theirs", 2)
+        .run();
+
+      const result = (await load({
+        locals: { user: USER },
+        platform: platform(db),
+      } as never)) as { leagues: unknown[] };
+
+      expect(result.leagues).toEqual([]);
+    });
+
     it("redirects an anonymous caller to sign-in", async () => {
       await expect(
         load({ locals: { user: null }, platform: platform(db) } as never),

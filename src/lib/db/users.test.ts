@@ -430,4 +430,52 @@ describe("provisionUser", () => {
     expect(user.email).toBeNull();
     expect(user.display_name).toBeNull();
   });
+
+  it("re-links an existing email to a new Clerk id instead of duplicating", async () => {
+    const original = await provisionUser(db, {
+      clerk_user_id: "clerk_old",
+      display_name: "Joe",
+      email: "joe@example.com",
+    });
+    await updateUserProfile(db, "clerk_old", {
+      dashboard_url: "https://dash.example.com",
+      visibility: "private",
+    });
+
+    // Same email re-authenticates under a brand-new Clerk id.
+    const relinked = await provisionUser(db, {
+      clerk_user_id: "clerk_new",
+      display_name: "Joseph",
+      email: "joe@example.com",
+    });
+
+    // Same row, re-pointed to the new Clerk id — no duplicate created.
+    expect(relinked.id).toBe(original.id);
+    expect(relinked.clerk_user_id).toBe("clerk_new");
+    expect(relinked.display_name).toBe("Joseph");
+    // Local-only fields preserved across the re-link.
+    expect(relinked.visibility).toBe("private");
+    expect(relinked.dashboard_url).toBe("https://dash.example.com");
+
+    const all = await db.prepare("SELECT COUNT(*) AS n FROM users").first<{ n: number }>();
+    expect(all?.n).toBe(1);
+    // The old Clerk id no longer resolves a row.
+    expect(await getUserByClerkId(db, "clerk_old")).toBeNull();
+  });
+
+  it("does not re-link when email is null (creates a separate row)", async () => {
+    await provisionUser(db, {
+      clerk_user_id: "clerk_a",
+      display_name: "A",
+      email: null,
+    });
+    await provisionUser(db, {
+      clerk_user_id: "clerk_b",
+      display_name: "B",
+      email: null,
+    });
+
+    const all = await db.prepare("SELECT COUNT(*) AS n FROM users").first<{ n: number }>();
+    expect(all?.n).toBe(2);
+  });
 });

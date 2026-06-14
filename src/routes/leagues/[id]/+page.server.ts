@@ -14,6 +14,10 @@ import { listLogsByAgents } from "../../../lib/db/logs";
 import { recognizedTypesForLeague } from "../../../lib/db/milestone-types";
 import { listMilestonesByAgents } from "../../../lib/db/milestones";
 import { listStandings } from "../../../lib/db/rounds";
+import {
+  getCurrentSnapshotResetDate,
+  listCurrentSnapshotSeries,
+} from "../../../lib/db/snapshot-rankings";
 import { resolveActor } from "../../../lib/leagues/actor";
 import {
   addParticipant,
@@ -97,6 +101,20 @@ export const load: PageServerLoad = async ({ locals, params, platform }) => {
     })),
   );
 
+  // Live (pre-finalize) complement: the participants' credits over the current
+  // snapshot cycle, so the chart is populated before the first finalize. Reuses
+  // the same authorized participant set as the finalized chart above.
+  const symbols = participants.map((p) => p.symbol);
+  const resetDate = await getCurrentSnapshotResetDate(db);
+  const liveSeries = await listCurrentSnapshotSeries(db, resetDate, symbols);
+  const liveChart = buildLineChart(
+    liveSeries.observedAts,
+    symbols.map((symbol) => ({
+      label: symbol,
+      values: liveSeries.bySymbol.get(symbol) ?? [],
+    })),
+  );
+
   const recognized = await recognizedTypesForLeague(db, id);
   const milestoneRecords = await listMilestonesByAgents(db, agentIds, 50);
   const milestoneItems = milestoneRecords.map((m) => {
@@ -144,7 +162,7 @@ export const load: PageServerLoad = async ({ locals, params, platform }) => {
     valibot(leagueDetailsSchema),
   );
 
-  return { canManage, chart, activity, form, invites, league, participants, standings, standingsRound: latestRound?.reset_date ?? null };
+  return { canManage, chart, liveChart, activity, form, invites, league, participants, standings, standingsRound: latestRound?.reset_date ?? null };
 };
 
 export const actions: Actions = {

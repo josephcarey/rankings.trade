@@ -74,6 +74,29 @@ export async function getUserByClerkId(
 }
 
 /**
+ * Retrieve a user record by email (the first match by id, oldest first).
+ *
+ * Used by {@link provisionUser} to detect when a NEW Clerk identity arrives for
+ * an email that already has a local user, so the existing row can be re-linked
+ * instead of a duplicate row being created. Null emails never match.
+ *
+ * @param db D1 database instance
+ * @param email Email address to look up
+ * @returns The matching user record, or null if none / email is null
+ */
+async function getUserByEmail(
+  db: D1Database,
+  email: string | null,
+): Promise<User | null> {
+  if (email === null) return null;
+  const result = await db
+    .prepare("SELECT * FROM users WHERE email = ? ORDER BY id ASC LIMIT 1")
+    .bind(email)
+    .first<User>();
+  return result ?? null;
+}
+
+/**
  * Insert or update a user record keyed on `clerk_user_id`.
  *
  * On conflict (same `clerk_user_id`) the email, display_name, visibility,
@@ -126,15 +149,55 @@ export async function upsertUser(
  * **preserved** — this is the key difference from {@link upsertUser}, which
  * overwrites them.
  *
+ * **Duplicate-by-email guard:** when no row matches `clerk_user_id` but a row
+ * already exists for the same (non-null) `email`, that row is RE-LINKED to the
+ * new `clerk_user_id` (and its Clerk fields refreshed) instead of inserting a
+ * second row. This prevents the duplicate-email/different-clerk-id rows that
+ * arise when a user re-authenticates under a fresh Clerk identity. The user's
+ * local-only fields (`visibility`, `dashboard_url`) are preserved on re-link.
+ *
  * @param db D1 database instance
  * @param input The current Clerk identity (id + mutable Clerk fields)
- * @returns The resulting (inserted or refreshed) user record
+ * @returns The resulting (inserted, refreshed, or re-linked) user record
  * @throws If the record cannot be read back after the write
  */
 export async function provisionUser(
   db: D1Database,
   input: ProvisionUserInput,
 ): Promise<User> {
+  // Re-link guard: a known email under a NEW Clerk id updates the existing row
+  // rather than creating a duplicate. Only applies when this Clerk id is unseen.
+  const existingByClerk = await getUserByClerkId(db, input.clerk_user_id);
+  if (!existingByClerk) {
+    const existingByEmail = await getUserByEmail(db, input.email);
+    if (existingByEmail) {
+      await db
+        .prepare(
+          `UPDATE users
+             SET clerk_user_id = ?,
+                 email         = ?,
+                 display_name  = ?,
+                 updated_at    = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+        )
+        .bind(
+          input.clerk_user_id,
+          input.email,
+          input.display_name,
+          existingByEmail.id,
+        )
+        .run();
+
+      const relinked = await getUserByClerkId(db, input.clerk_user_id);
+      if (!relinked) {
+        throw new Error(
+          `provisionUser: record not found after re-link (${input.clerk_user_id})`,
+        );
+      }
+      return relinked;
+    }
+  }
+
   await db
     .prepare(
       `INSERT INTO users (clerk_user_id, email, display_name)

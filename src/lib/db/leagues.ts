@@ -79,6 +79,32 @@ export async function listLeaguesByOwner(
 }
 
 /**
+ * List the leagues a user should see on their leagues home: the UNION of leagues
+ * they OWN and leagues where they own an active (not-yet-left) member agent —
+ * newest league first, deduplicated. A user enrolled via an agent therefore sees
+ * that league even when they don't own it.
+ */
+export async function listLeaguesForUser(
+  db: D1Database,
+  userId: number,
+): Promise<League[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT l.* FROM leagues l
+       WHERE l.owner_user_id = ?
+          OR l.id IN (
+            SELECT m.league_id FROM league_members m
+            JOIN agents a ON a.id = m.agent_id
+            WHERE m.left_at IS NULL AND a.owner_user_id = ?
+          )
+       ORDER BY l.created_at DESC, l.id DESC`,
+    )
+    .bind(userId, userId)
+    .all<League>();
+  return results ?? [];
+}
+
+/**
  * List every public league, newest first.
  */
 export async function listPublicLeagues(db: D1Database): Promise<League[]> {
