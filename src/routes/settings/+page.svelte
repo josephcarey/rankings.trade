@@ -1,9 +1,15 @@
 <script lang="ts">
   import { superForm } from "sveltekit-superforms";
 
+  import type { ThemeMode } from "../../lib/theme";
+
+  import ThemeToggle from "../../lib/components/theme-toggle.svelte";
+
   let { data } = $props();
 
   const { enhance, errors, form, message, submitting } = superForm(data.form);
+
+  let themeMode = $state<ThemeMode>(data.theme);
 
   const clearDashboardUrl = () => {
     $form.dashboard_url = "";
@@ -69,6 +75,15 @@
       {$submitting ? "Saving…" : "Save changes"}
     </button>
   </form>
+
+  <section class="flow theme-section" aria-labelledby="appearance-heading">
+    <h2 id="appearance-heading">Appearance</h2>
+    <p class="theme-help">
+      Choose how rankings.trade looks. <strong>System</strong> follows your device
+      setting. Saved on this device — no account needed.
+    </p>
+    <ThemeToggle bind:mode={themeMode} label="Theme" />
+  </section>
 </main>
 
 <style>
@@ -80,6 +95,22 @@
   h1 {
     font-size: var(--font-size-fluid-2);
     margin: 0;
+  }
+
+  h2 {
+    font-size: var(--font-size-4);
+    margin: 0;
+  }
+
+  .theme-section {
+    margin-block-start: var(--size-8);
+    border-block-start: var(--border-size-1) solid var(--color-text-muted);
+    padding-block-start: var(--size-6);
+  }
+
+  .theme-help {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-0);
   }
 
   fieldset {

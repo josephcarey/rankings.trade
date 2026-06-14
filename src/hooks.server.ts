@@ -7,6 +7,7 @@ import { api } from "./api/app";
 import { requireAuthHandle } from "./lib/auth/guard";
 import { createLocalUserHandle } from "./lib/auth/local-user";
 import { clerkSessionHandle } from "./lib/auth/session";
+import { injectThemeAttribute, parseThemeMode, THEME_COOKIE } from "./lib/theme";
 
 const apiHandle: Handle = ({ event, resolve }) => {
   if (event.url.pathname.startsWith("/api")) {
@@ -14,6 +15,19 @@ const apiHandle: Handle = ({ event, resolve }) => {
   }
 
   return resolve(event);
+};
+
+/**
+ * Stamps the persisted theme mode onto the server-rendered `<html data-theme>`
+ * so first paint matches the user's choice with no flash of the wrong theme.
+ * `system` is emitted literally and the CSS `prefers-color-scheme` query
+ * decides; explicit `light`/`dark` win over the media query.
+ */
+const themeHandle: Handle = ({ event, resolve }) => {
+  const mode = parseThemeMode(event.cookies.get(THEME_COOKIE));
+  return resolve(event, {
+    transformPageChunk: ({ html }) => injectThemeAttribute(html, mode),
+  });
 };
 
 const localUserHandle = createLocalUserHandle({
@@ -33,5 +47,6 @@ export const handle: Handle = sequence(
   clerkSessionHandle(),
   localUserHandle,
   requireAuthHandle,
+  themeHandle,
   apiHandle,
 );

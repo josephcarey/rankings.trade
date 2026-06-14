@@ -34,6 +34,7 @@ type AppEvent = Parameters<typeof handle>[0]["event"];
 function eventFor(url: string, extra: Partial<AppEvent> = {}): AppEvent {
   return {
     locals: { auth: () => ({ sessionId: null, userId: null }) },
+    cookies: { get: () => {} },
     request: new Request(url),
     url: new URL(url),
     ...extra,
