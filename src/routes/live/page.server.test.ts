@@ -7,7 +7,9 @@ import { runMigrations } from "../../lib/db/migrate";
 import { createSqliteD1 } from "../../lib/db/sqlite-d1-adapter";
 import { load } from "./+page.server";
 
-const migrationsDir = fileURLToPath(new URL("../../../migrations", import.meta.url));
+const migrationsDir = fileURLToPath(
+  new URL("../../../migrations", import.meta.url),
+);
 
 async function makeDb(): Promise<D1Database> {
   const SQL = await Database();
@@ -62,7 +64,10 @@ describe("live page server load", () => {
   });
 
   it("returns an empty state when there are no snapshots", async () => {
-    const result = (await invoke(db)) as { resetDate: unknown; rows: unknown[] };
+    const result = (await invoke(db)) as {
+      resetDate: unknown;
+      rows: unknown[];
+    };
     expect(result.resetDate).toBeNull();
     expect(result.rows).toEqual([]);
   });
@@ -76,12 +81,24 @@ describe("live page server load", () => {
 
     const result = (await invoke(db)) as {
       chart: { hasData: boolean };
+      defaultSymbols: string[];
+      observedAts: string[];
       resetDate: string;
       rows: { rank: number; symbol: string }[];
+      seriesBySymbol: Record<string, (null | number)[]>;
     };
     expect(result.resetDate).toBe("2026-06-07");
     expect(result.rows.map((r) => r.symbol)).toEqual(["BETA", "ALFA"]);
     expect(result.rows[0]?.rank).toBe(1);
     expect(result.chart.hasData).toBe(true);
+
+    // The all-agent matrix is shipped for client-side line selection, keyed by
+    // symbol and aligned to the shared observed_at axis (null gaps preserved).
+    expect(result.observedAts).toEqual(["T1", "T2"]);
+    expect(result.defaultSymbols).toEqual(["BETA", "ALFA"]);
+    expect(result.seriesBySymbol["ALFA"]).toEqual([100, 500]);
+    expect(result.seriesBySymbol["BETA"]).toEqual([null, 800]);
+    // OLD belongs to a previous cycle and must not appear in the matrix.
+    expect(result.seriesBySymbol["OLD"]).toBeUndefined();
   });
 });

@@ -37,6 +37,38 @@ export interface SnapshotSeries {
 }
 
 /**
+ * Maximum number of x-axis columns shipped in the all-agent series matrix.
+ *
+ * A cycle can hold hundreds of `observed_at` buckets (many from a legacy
+ * import); shipping every agent at every bucket would be a multi-hundred-KB
+ * payload. We downsample the axis to this many evenly-spaced columns — enough to
+ * show each line's shape while keeping the page within its cache budget. Tune
+ * here: lower = smaller payload + coarser lines, higher = the reverse.
+ */
+const SERIES_MATRIX_MAX_COLUMNS = 48;
+
+/**
+ * Pick at most `maxColumns` evenly-spaced indices from `[0, length)`, ALWAYS
+ * keeping the first and last so a downsampled series spans the full cycle.
+ * Deterministic and pure. Returns every index when `length <= maxColumns`.
+ */
+export function pickDownsampledIndices(
+  length: number,
+  maxColumns: number,
+): number[] {
+  if (length <= 0 || maxColumns <= 0) return [];
+  if (length <= maxColumns) return Array.from({ length }, (_, i) => i);
+  if (maxColumns === 1) return [0];
+
+  const indices: number[] = [];
+  for (let i = 0; i < maxColumns; i++) {
+    indices.push(Math.round((i / (maxColumns - 1)) * (length - 1)));
+  }
+  // Dedup defensively in case rounding maps two slots to the same index.
+  return [...new Set(indices)];
+}
+
+/**
  * The current snapshot cycle's `reset_date` (`MAX(reset_date)`), or null when no
  * snapshots exist yet.
  */
@@ -154,6 +186,73 @@ export async function listCurrentSnapshotSeries(
     const series = bySymbol.get(row.agent_symbol);
     const at = indexByTime.get(row.observed_at);
     if (series && at !== undefined) series[at] = row.credits;
+  }
+
+  return { observedAts, bySymbol };
+}
+
+/**
+ * Credit series for ALL agents in one cycle, aligned to a DOWNSAMPLED ascending
+ * `observed_at` axis of at most {@link SERIES_MATRIX_MAX_COLUMNS} columns. This
+ * is the matrix shipped to the live page so the client can toggle any agent's
+ * line and recompute the chart (incl. y-axis rescale) via `buildLineChart`
+ * without a per-agent round-trip.
+ *
+ * Cost is bounded: one cheap `DISTINCT observed_at` scan to learn the axis, then
+ * a single `WHERE reset_date = ? AND observed_at IN (…)` fetch served by the
+ * existing `idx_snapshots_reset_time (reset_date, observed_at)` index — no
+ * schema change. A missing observation is a null GAP, never a zero.
+ */
+export async function listCurrentSnapshotSeriesMatrix(
+  db: D1Database,
+  resetDate: string | null,
+  maxColumns: number = SERIES_MATRIX_MAX_COLUMNS,
+): Promise<SnapshotSeries> {
+  if (resetDate === null) return { observedAts: [], bySymbol: new Map() };
+
+  const { results: timeRows } = await db
+    .prepare(
+      `SELECT DISTINCT observed_at AS observed_at
+       FROM snapshots
+       WHERE reset_date = ?
+       ORDER BY observed_at ASC`,
+    )
+    .bind(resetDate)
+    .all<{ observed_at: string }>();
+  const allTimes = (timeRows ?? []).map((r) => r.observed_at);
+  if (allTimes.length === 0) return { observedAts: [], bySymbol: new Map() };
+
+  const observedAts = pickDownsampledIndices(allTimes.length, maxColumns).map(
+    (i) => allTimes[i]!,
+  );
+
+  const placeholders = observedAts.map(() => "?").join(", ");
+  const { results } = await db
+    .prepare(
+      `SELECT observed_at AS observed_at,
+              agent_symbol AS agent_symbol,
+              credits AS credits
+       FROM snapshots
+       WHERE reset_date = ? AND observed_at IN (${placeholders})
+       ORDER BY observed_at ASC`,
+    )
+    .bind(resetDate, ...observedAts)
+    .all<SeriesQueryRow>();
+  const rows = results ?? [];
+
+  const indexByTime = new Map(observedAts.map((t, i) => [t, i]));
+  const bySymbol = new Map<string, (null | number)[]>();
+  for (const row of rows) {
+    let series = bySymbol.get(row.agent_symbol);
+    if (!series) {
+      series = Array.from(
+        { length: observedAts.length },
+        () => null as null | number,
+      );
+      bySymbol.set(row.agent_symbol, series);
+    }
+    const at = indexByTime.get(row.observed_at);
+    if (at !== undefined) series[at] = row.credits;
   }
 
   return { observedAts, bySymbol };

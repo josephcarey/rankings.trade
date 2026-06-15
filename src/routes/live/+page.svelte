@@ -1,10 +1,59 @@
 <script lang="ts">
+  import { SvelteSet } from "svelte/reactivity";
+
+  import { buildLineChart } from "../../lib/charts/line-chart";
   import LineChart from "../../lib/components/line-chart.svelte";
 
   let { data } = $props();
 
   const fmt = (value: null | number): string =>
     value === null ? "—" : value.toLocaleString("en-US");
+
+  // Which agent lines are plotted. Seeded with the server's default top-10 so
+  // first paint matches the SSR chart exactly; toggling is a pure client-side
+  // recompute of `buildLineChart` over the shipped series matrix.
+  const selected = new SvelteSet<string>(data.defaultSymbols);
+
+  // Client-side filter to find an agent among the full list (e.g. a mid-pack
+  // callsign) without scrolling — purely narrows the visible rows.
+  let filter = $state("");
+
+  const hasSeries = $derived(data.observedAts.length > 0);
+
+  const normalizedFilter = $derived(filter.trim().toUpperCase());
+  const visibleRows = $derived(
+    normalizedFilter === ""
+      ? data.rows
+      : data.rows.filter((row) => row.symbol.toUpperCase().includes(normalizedFilter)),
+  );
+
+  // Build the chart from the SELECTED rows in rank order (stable, deterministic
+  // colour assignment). buildLineChart recomputes yMin/yMax from this subset, so
+  // the y-axis rescales to fit exactly the currently-plotted lines.
+  const selectedChart = $derived(
+    buildLineChart(
+      data.observedAts,
+      data.rows
+        .filter((row) => selected.has(row.symbol))
+        .map((row) => ({
+          label: row.symbol,
+          values: data.seriesBySymbol[row.symbol] ?? [],
+        })),
+    ),
+  );
+
+  function toggle(symbol: string): void {
+    if (selected.has(symbol)) selected.delete(symbol);
+    else selected.add(symbol);
+  }
+
+  function selectAll(): void {
+    for (const row of data.rows) selected.add(row.symbol);
+  }
+
+  function selectNone(): void {
+    selected.clear();
+  }
 </script>
 
 <svelte:head>
@@ -33,15 +82,37 @@
       first observation of the cycle.
     </p>
   {:else}
-    {#if data.chart}
+    {#if hasSeries}
       <section class="graph flow">
         <h2>Top agents — credits this cycle</h2>
         <LineChart
-          chart={data.chart}
-          caption="Credits of the top agents over the current cycle"
-          emptyText="No credits history yet."
+          chart={selectedChart}
+          caption="Credits of the selected agents over the current cycle"
+          emptyText="No agents selected — tick a row below to plot its credit line."
           legend
         />
+        <div class="chart-controls">
+          <div class="control-buttons">
+            <button type="button" onclick={selectAll}>All</button>
+            <button type="button" onclick={selectNone}>None</button>
+          </div>
+          <p class="selection-count" aria-live="polite">
+            Plotting <strong>{selected.size}</strong> of {data.rows.length} agents.
+            {#if selected.size > 40}
+              <span class="hint">Lots of lines — deselect some for a clearer comparison.</span>
+            {/if}
+          </p>
+        </div>
+        <div class="filter">
+          <label for="agent-filter">Find an agent</label>
+          <input
+            id="agent-filter"
+            type="search"
+            bind:value={filter}
+            placeholder="Filter by callsign…"
+            autocomplete="off"
+          />
+        </div>
       </section>
     {/if}
 
@@ -49,6 +120,9 @@
       <table class="data-table">
         <thead>
           <tr>
+            {#if hasSeries}
+              <th scope="col" class="pick-col">Line</th>
+            {/if}
             <th scope="col" class="num">#</th>
             <th scope="col">Agent</th>
             <th scope="col" class="num">Credits</th>
@@ -57,8 +131,18 @@
           </tr>
         </thead>
         <tbody>
-          {#each data.rows as row (row.symbol)}
+          {#each visibleRows as row (row.symbol)}
             <tr>
+              {#if hasSeries}
+                <td class="pick-col">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(row.symbol)}
+                    onchange={() => toggle(row.symbol)}
+                    aria-label={`Plot ${row.symbol} credit line`}
+                  />
+                </td>
+              {/if}
               <td class="num">{row.rank}</td>
               <td>
                 <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- dynamic public profile route -->
@@ -98,6 +182,73 @@
 
   .graph {
     margin-block: var(--size-5);
+  }
+
+  .chart-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--size-3);
+    margin-block-start: var(--size-3);
+  }
+
+  .control-buttons {
+    display: flex;
+    gap: var(--size-2);
+  }
+
+  .control-buttons button {
+    padding: var(--size-1) var(--size-3);
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-2);
+    cursor: pointer;
+  }
+
+  .control-buttons button:hover {
+    border-color: var(--color-text-muted);
+  }
+
+  .selection-count {
+    margin: 0;
+    font-size: var(--font-size-0);
+    color: var(--color-text-muted);
+  }
+
+  .selection-count .hint {
+    font-style: italic;
+  }
+
+  .filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--size-2);
+    margin-block-start: var(--size-3);
+    font-size: var(--font-size-0);
+  }
+
+  .filter input {
+    flex: 1 1 12rem;
+    min-inline-size: 8rem;
+    padding: var(--size-1) var(--size-2);
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-2);
+  }
+
+  .pick-col {
+    inline-size: 1px;
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .pick-col input {
+    cursor: pointer;
   }
 
   .footnote {
