@@ -1,0 +1,28 @@
+version: 2
+
+# NOTE: This repo uses Bun (bun.lock). Dependabot does not parse Bun lockfiles,
+# so the npm ecosystem below updates the package.json manifests using npm
+# semantics only. Treat its PRs as manifest bumps and re-run `bun install` to
+# refresh bun.lock when merging.
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      actions-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
