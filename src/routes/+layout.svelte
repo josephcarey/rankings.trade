@@ -140,6 +140,30 @@
   <main id="main-content">
     {@render children()}
   </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner wrapper">
+      <span class="footer-wordmark">rankings.trade</span>
+      <nav class="footer-links" aria-label="Footer">
+        <a
+          class="footer-link"
+          href="https://github.com/josephcarey/rankings.trade"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          GitHub
+        </a>
+        <a
+          class="footer-link"
+          href="https://github.com/josephcarey/rankings.trade/issues"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Report an issue
+        </a>
+      </nav>
+    </div>
+  </footer>
 </ClerkProvider>
 
 <style>
@@ -318,5 +342,45 @@
 
   main {
     padding-block: var(--size-8);
+  }
+
+  .site-footer {
+    border-block-start: var(--border-size-1) solid var(--color-text-muted);
+    background-color: var(--color-surface);
+    padding-block: var(--size-4);
+  }
+
+  .footer-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--size-2) var(--size-4);
+  }
+
+  .footer-wordmark {
+    font-size: var(--font-size-0);
+    color: var(--color-text-muted);
+  }
+
+  .footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--size-4);
+  }
+
+  .footer-link {
+    font-size: var(--font-size-0);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 44px;
+    transition: color 150ms ease;
+  }
+
+  .footer-link:hover {
+    color: var(--color-accent);
   }
 </style>
