@@ -9,22 +9,31 @@
   const fmt = (value: null | number): string =>
     value === null ? "—" : value.toLocaleString("en-US");
 
+  // Normalize the payload once. A short CDN/browser cache can serve a STALE
+  // `/live/__data.json` (a pre-line-picker shape with no observedAts/series) to
+  // a client already running the new bundle, so these fields may be missing on a
+  // transient post-deploy cache skew. Default them here and read the locals
+  // everywhere so a partial payload renders the empty state instead of throwing.
+  const observedAts = $derived(data.observedAts ?? []);
+  const rows = $derived(data.rows ?? []);
+  const seriesBySymbol = $derived(data.seriesBySymbol ?? {});
+
   // Which agent lines are plotted. Seeded with the server's default top-10 so
   // first paint matches the SSR chart exactly; toggling is a pure client-side
   // recompute of `buildLineChart` over the shipped series matrix.
-  const selected = new SvelteSet<string>(data.defaultSymbols);
+  const selected = new SvelteSet<string>(data.defaultSymbols ?? []);
 
   // Client-side filter to find an agent among the full list (e.g. a mid-pack
   // callsign) without scrolling — purely narrows the visible rows.
   let filter = $state("");
 
-  const hasSeries = $derived(data.observedAts.length > 0);
+  const hasSeries = $derived(observedAts.length > 0);
 
   const normalizedFilter = $derived(filter.trim().toUpperCase());
   const visibleRows = $derived(
     normalizedFilter === ""
-      ? data.rows
-      : data.rows.filter((row) => row.symbol.toUpperCase().includes(normalizedFilter)),
+      ? rows
+      : rows.filter((row) => row.symbol.toUpperCase().includes(normalizedFilter)),
   );
 
   // Build the chart from the SELECTED rows in rank order (stable, deterministic
@@ -32,12 +41,12 @@
   // the y-axis rescales to fit exactly the currently-plotted lines.
   const selectedChart = $derived(
     buildLineChart(
-      data.observedAts,
-      data.rows
+      observedAts,
+      rows
         .filter((row) => selected.has(row.symbol))
         .map((row) => ({
           label: row.symbol,
-          values: data.seriesBySymbol[row.symbol] ?? [],
+          values: seriesBySymbol[row.symbol] ?? [],
         })),
     ),
   );
@@ -48,7 +57,7 @@
   }
 
   function selectAll(): void {
-    for (const row of data.rows) selected.add(row.symbol);
+    for (const row of rows) selected.add(row.symbol);
   }
 
   function selectNone(): void {
@@ -76,7 +85,7 @@
     {/if}
   </header>
 
-  {#if data.rows.length === 0}
+  {#if rows.length === 0}
     <p class="empty">
       No snapshots have been captured yet. Live standings appear once the scraper records the
       first observation of the cycle.
@@ -97,7 +106,7 @@
             <button type="button" onclick={selectNone}>None</button>
           </div>
           <p class="selection-count" aria-live="polite">
-            Plotting <strong>{selected.size}</strong> of {data.rows.length} agents.
+            Plotting <strong>{selected.size}</strong> of {rows.length} agents.
             {#if selected.size > 40}
               <span class="hint">Lots of lines — deselect some for a clearer comparison.</span>
             {/if}
