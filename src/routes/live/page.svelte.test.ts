@@ -118,3 +118,40 @@ describe("live page line selection", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("live page stale/partial payload resilience", () => {
+  // A short CDN/browser cache can serve the OLD `/live/__data.json` shape (no
+  // observedAts/seriesBySymbol/defaultSymbols) to a client already running the
+  // new bundle. The component must render the empty state, not throw.
+  it("renders the empty state for a stale payload with no rows or series", () => {
+    const stale = { chart: null, resetDate: null, rows: [] };
+    expect(() => render(Page, { data: stale as never })).not.toThrow();
+    expect(
+      screen.getByText(/No snapshots have been captured yet/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Plotting/)).not.toBeInTheDocument();
+  });
+
+  it("renders rows without a chart when series fields are missing", () => {
+    const partial = {
+      chart: null,
+      resetDate: null,
+      rows: [
+        {
+          rank: 1,
+          symbol: "LEADER",
+          agent_id: null,
+          display_name: null,
+          credits: 2_000_000,
+          credit_rank: 1,
+          ship_count: 5,
+        },
+      ],
+    };
+    const { container } = render(Page, { data: partial as never });
+    expect(screen.getByText("LEADER")).toBeInTheDocument();
+    // No observedAts → no chart section / line picker.
+    expect(container.querySelector("svg")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Plotting/)).not.toBeInTheDocument();
+  });
+});
