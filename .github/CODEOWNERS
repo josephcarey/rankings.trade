@@ -1,0 +1,3 @@
+# Default code owner for the whole repository.
+# Activates the branch ruleset's require_code_owner_review on every PR.
+* @josephcarey
